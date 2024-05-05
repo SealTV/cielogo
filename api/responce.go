@@ -1,4 +1,4 @@
-package types
+package api
 
 type CieloResponse[T any] struct {
 	Status  string `json:"status"`

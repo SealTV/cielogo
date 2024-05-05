@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sealtv/cielogo/types"
+	"github.com/sealtv/cielogo/api"
 )
 
 const apiBaseUrl = "https://feed-api.cielo.finance/api"
@@ -58,7 +58,7 @@ func (c *Client) makeRequest(ctx context.Context, method, path string, body, out
 
 	fmt.Println(resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
-		var cErr error = &types.Error{}
+		var cErr error = &api.Error{}
 		if err := json.NewDecoder(resp.Body).Decode(cErr); err != nil {
 			return fmt.Errorf("failed to unmarshal error response body: %w, status code: %d", err, resp.StatusCode)
 		}

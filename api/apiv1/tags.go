@@ -1,7 +1,5 @@
 package apiv1
 
-// https://developer.cielo.finance/reference/getwallettags
-
 type TagType string
 
 const (
@@ -23,20 +21,11 @@ const (
 	TagTypeMev                 TagType = "mev"
 )
 
-// type Tags []Tag
+type GetWalletTagsRequest struct {
+	Wallet string `json:"wallet"`
+}
 
-// func (tt *Tags) UnmarshalJSON(data []byte) error {
-// 	var tags []Tag
-
-// 	if err := json.Unmarshal(data, &tags); err != nil {
-// 		return err
-// 	}
-
-// 	*tt = tags
-// 	return nil
-// }
-
-type TagsResponse struct {
+type GetWalletTagsResponse struct {
 	Tags []Tag `json:"tags"`
 }
 
@@ -45,22 +34,3 @@ type Tag struct {
 	Tag         string  `json:"tag"`
 	Description string  `json:"description"`
 }
-
-// func (t *Tag) UnmarshalJSON(data []byte) error {
-// 	type Alias Tag
-// 	aux := &struct {
-// 		Key string `json:"key"`
-// 		*Alias
-// 	}{
-// 		Alias: (*Alias)(t),
-// 	}
-
-// 	fmt.Sprintf("aaaaa: %s", string(data))
-// 	if err := json.Unmarshal(data, &aux); err != nil {
-// 		return err
-// 	}
-
-// 	t.Key = TagType(aux.Key)
-
-// 	return nil
-// }
