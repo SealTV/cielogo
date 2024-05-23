@@ -57,16 +57,21 @@ type TokenPnl struct {
 	Name    string           `json:"token_name"`
 	Chain   chains.ChainType `json:"chain"`
 
-	TotalBuyUSD             float64 `json:"total_buy_usd"`
-	TotalBuyAmount          float64 `json:"total_buy_amount"`
-	TotalSellUSD            float64 `json:"total_sell_usd"`
-	TotalSellAmount         float64 `json:"total_sell_amount"`
-	AverageBuyPrice         float64 `json:"average_buy_price"`
-	AverageSellPrice        float64 `json:"average_sell_price"`
-	TotalPnlUSD             float64 `json:"total_pnl_usd"`
-	RoiPercentage           float64 `json:"roi_percentage"`
+	TotalBuyUSD    float64 `json:"total_buy_usd"`
+	TotalBuyAmount float64 `json:"total_buy_amount"`
+
+	TotalSellUSD    float64 `json:"total_sell_usd"`
+	TotalSellAmount float64 `json:"total_sell_amount"`
+
+	AverageBuyPrice  float64 `json:"average_buy_price"`
+	AverageSellPrice float64 `json:"average_sell_price"`
+
+	TotalPnlUSD   float64 `json:"total_pnl_usd"`
+	RoiPercentage float64 `json:"roi_percentage"`
+
 	UnrealizedPnlUSD        float64 `json:"unrealized_pnl_usd"`
 	UnrealizedRoiPercentage float64 `json:"unrealized_roi_percentage"`
-	NumSwaps                int     `json:"num_swaps"`
-	IsHoneypot              bool    `json:"is_honeypot"`
+
+	NumSwaps   int  `json:"num_swaps"`
+	IsHoneypot bool `json:"is_honeypot"`
 }
