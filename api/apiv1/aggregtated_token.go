@@ -49,11 +49,18 @@ func (r *AggregatedTokenPnLRequest) GetQueryString() string {
 }
 
 type AggregatedTokenPnLResponse struct {
-	Wallet                  string  `json:"wallet"`
-	PnlUsd                  float64 `json:"pnl_usd"`
-	RoiPercentage           float64 `json:"roi_percentage"`
-	TokensTraded            float64 `json:"tokens_traded"`
+	Wallet       string `json:"wallet"`
+	TokensTraded int    `json:"tokens_traded"`
+
+	RealizedPnlUsd        float64 `json:"realized_pnl_usd"`
+	RealizedRoiPercentage float64 `json:"realized_roi_percentage"`
+
 	UnrealizedPnlUsd        float64 `json:"unrealized_pnl_usd"`
 	UnrealizedRoiPercentage float64 `json:"unrealized_roi_percentage"`
-	Winrate                 float64 `json:"winrate"`
+
+	CombinedPnlUsd        float64 `json:"combined_pnl_usd"`
+	CombinedRoiPercentage float64 `json:"combined_roi_percentage"`
+
+	Winrate            float64 `json:"winrate"`
+	AverageHoldingTime float64 `json:"average_holding_time"`
 }
