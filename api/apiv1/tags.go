@@ -34,3 +34,32 @@ type Tag struct {
 	Tag         string  `json:"tag"`
 	Description string  `json:"description"`
 }
+
+type WalletType string
+
+const (
+	WalletTypeEvm    WalletType = "evm"
+	WalletTypeSolana WalletType = "solana"
+)
+
+type GetWalletsByTagRequest struct {
+	Tags       []TagType   `json:"tags"`
+	WalletType *WalletType `json:"wallet_type,omitempty"`
+	Limit      *int        `json:"limit,omitempty"`
+	NextObject *string     `json:"next_object,omitempty"`
+}
+
+type GetWalletsByTagResponse struct {
+	Wallets []Wallet           `json:"items"`
+	Paging  WalletsByTagPaging `json:"paging"`
+}
+
+type Wallet struct {
+	Wallet     string     `json:"wallet"`
+	WalletType WalletType `json:"wallet_type"`
+}
+
+type WalletsByTagPaging struct {
+	HasNextPage bool `json:"has_next_page"`
+	NextPage    int  `json:"next_page,omitempty"`
+}
