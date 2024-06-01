@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/sealtv/cielogo/api"
 	"github.com/sealtv/cielogo/api/apiv1"
@@ -80,6 +81,37 @@ func (c *Client) GetWalletTagsV1(ctx context.Context, req apiv1.GetWalletTagsReq
 	path := fmt.Sprintf("/v1/%s/tags", req.Wallet)
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get wallet tags: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// GetWalletsByTagV1 returns a list of wallets for a given tag.
+// https://developer.cielo.finance/reference/getwalletsbytag
+func (c *Client) GetWalletsByTagV1(ctx context.Context, req *apiv1.GetWalletsByTagRequest) (*apiv1.GetWalletsByTagResponse, error) {
+	resp := api.CieloResponse[apiv1.GetWalletsByTagResponse]{}
+
+	values := url.Values{}
+	for _, tag := range req.Tags {
+		values.Add("tags", string(tag))
+	}
+
+	if req.WalletType != nil && *req.WalletType != "" {
+		values.Add("wallet_type", string(*req.WalletType))
+	}
+
+	if req.Limit != nil {
+		values.Add("limit", fmt.Sprintf("%d", *req.Limit))
+	}
+
+	if req.NextObject != nil && *req.NextObject != "" {
+		values.Add("next_object", *req.NextObject)
+	}
+
+	path := fmt.Sprintf("/v1/tags/wallets?%s", values.Encode())
+
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get wallets by tag: %w", err)
 	}
 
 	return &resp.Data, nil
