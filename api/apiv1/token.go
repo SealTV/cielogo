@@ -14,6 +14,7 @@ type TokensPnLRequest struct {
 	Timeframe    *string
 	NextObject   *string
 	CexTransfers *bool
+	Tokens       []string
 }
 
 func (r *TokensPnLRequest) GetQueryString() string {
@@ -41,6 +42,11 @@ func (r *TokensPnLRequest) GetQueryString() string {
 	// Add NextObject if specified
 	if r.NextObject != nil {
 		values.Add("next_object", *r.NextObject)
+	}
+
+	// Add Tokens if specified
+	if len(r.Tokens) > 0 {
+		values.Add("token", strings.Join(r.Tokens, ","))
 	}
 
 	return values.Encode()
