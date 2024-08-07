@@ -78,6 +78,8 @@ type TokenPnl struct {
 	UnrealizedPnlUSD        float64 `json:"unrealized_pnl_usd"`
 	UnrealizedRoiPercentage float64 `json:"unrealized_roi_percentage"`
 
+	TokenPrice float64 `json:"token_price"`
+
 	NumSwaps   int  `json:"num_swaps"`
 	IsHoneypot bool `json:"is_honeypot"`
 }

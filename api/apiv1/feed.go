@@ -25,8 +25,14 @@ type FeedRequest struct {
 	Tokens []string
 	// Set a minimum USD value for transactions. Default - 0
 	MinUSD *float64
+	// Filter transactions by new trades.
+	NewTrades *bool
 	// Set value from response 'paging.next_object_id' to get next page.
 	StartFrom *string
+	// Filter transactions from a specific UNIX timestamp.
+	FromTimestamp *int64
+	// Filter transactions to a specific UNIX timestamp.
+	ToTimestamp *int64
 }
 
 func (r *FeedRequest) GetQueryString() string {
@@ -70,8 +76,20 @@ func (r *FeedRequest) GetQueryString() string {
 		values.Add("minUSD", fmt.Sprintf("%f", *r.MinUSD))
 	}
 
+	if r.NewTrades != nil {
+		values.Add("newTrades", fmt.Sprintf("%t", *r.NewTrades))
+	}
+
 	if r.StartFrom != nil {
 		values.Add("startFrom", *r.StartFrom)
+	}
+
+	if r.FromTimestamp != nil {
+		values.Add("fromTimestamp", fmt.Sprintf("%d", *r.FromTimestamp))
+	}
+
+	if r.ToTimestamp != nil {
+		values.Add("toTimestamp", fmt.Sprintf("%d", *r.ToTimestamp))
 	}
 
 	return values.Encode()
