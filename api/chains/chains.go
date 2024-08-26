@@ -28,5 +28,6 @@ const (
 	Pulsechain   ChainType = "pulsechain"
 	Scroll       ChainType = "scroll"
 	Solana       ChainType = "solana"
+	Tron         ChainType = "tron"
 	Zksync       ChainType = "zksync"
 )
