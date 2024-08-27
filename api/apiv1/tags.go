@@ -29,6 +29,15 @@ type GetWalletTagsResponse struct {
 	Tags []Tag `json:"tags"`
 }
 
+type GetWalletsTagsRequest struct {
+	Wallets []string
+}
+
+type WalletTags struct {
+	Wallet string `json:"wallet"`
+	Tags   []Tag  `json:"tags"`
+}
+
 type Tag struct {
 	Key         TagType `json:"key"`
 	Tag         string  `json:"tag"`
