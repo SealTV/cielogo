@@ -116,3 +116,100 @@ func (c *Client) GetWalletsByTagV1(ctx context.Context, req *apiv1.GetWalletsByT
 
 	return &resp.Data, nil
 }
+
+// Wallet Lists
+
+// GetAllWalletsListsV1 returns a list of all wallets.
+// https://developer.cielo.finance/reference/getalllists
+func (c *Client) GetAllWalletsListV1(ctx context.Context, req *apiv1.GetAllWalletsListsRequest) (*apiv1.GetAllWalletsListsResponse, error) {
+	resp := api.CieloResponse[apiv1.GetAllWalletsListsResponse]{}
+
+	values := url.Values{}
+
+	if req.Order != nil && *req.Order != "" {
+		values.Add("order", string(*req.Order))
+	}
+
+	if req.FollowOnly {
+		values.Add("follow_only", "true")
+	}
+
+	if req.NextObject != nil && *req.NextObject != "" {
+		values.Add("next_object", *req.NextObject)
+	}
+
+	path := fmt.Sprintf("/v1/lists/all?%s", values.Encode())
+
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get all wallets list: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// GetUserWalletsListsV1 returns a list of users wallets.
+// https://developer.cielo.finance/reference/getuserlists
+func (c *Client) GetUserWalletsListsV1(ctx context.Context) ([]apiv1.WalletList, error) {
+	resp := api.CieloResponse[[]apiv1.WalletList]{}
+
+	const path = "/v1/lists"
+
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get users lists: %w", err)
+	}
+
+	return resp.Data, nil
+}
+
+// AddWalletsListV1 adds a wallet to a list.
+// https://developer.cielo.finance/reference/adduserlist
+func (c *Client) AddWalletsListV1(ctx context.Context, req *apiv1.AddWalletsListRequest) (*apiv1.WalletList, error) {
+	const path = "/v1/lists"
+
+	resp := api.CieloResponse[apiv1.WalletList]{}
+
+	if err := c.makeRequest(ctx, http.MethodPost, path, req, &resp); err != nil {
+		return nil, fmt.Errorf("failed to add wallet to list: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// UpdateWalletsListV1 updates a wallet list.
+// https://developer.cielo.finance/reference/updateuserlist
+func (c *Client) UpdateWalletsListV1(ctx context.Context, req *apiv1.UpdateWalletsListRequest) (*apiv1.WalletList, error) {
+	resp := api.CieloResponse[apiv1.WalletList]{}
+	path := fmt.Sprintf("/v1/lists/%d", req.ListID)
+
+	if err := c.makeRequest(ctx, http.MethodPut, path, req, &resp); err != nil {
+		return nil, fmt.Errorf("failed to update wallet list: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// DeleteWalletsListV1 deletes a wallet list.
+// https://developer.cielo.finance/reference/deleteuserlist
+func (c *Client) DeleteWalletsListV1(ctx context.Context, listID int64) error {
+	path := fmt.Sprintf("/v1/lists/%d", listID)
+
+	if err := c.makeRequest(ctx, http.MethodDelete, path, nil, nil); err != nil {
+		return fmt.Errorf("failed to delete wallet list: %w", err)
+	}
+
+	return nil
+}
+
+// ToggleFollowWalletsListV1 toggles the follow status of a wallet list.
+// https://developer.cielo.finance/reference/togglefollowlist
+func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*apiv1.ToggleFollowWalletsListResponce, error) {
+	resp := apiv1.ToggleFollowWalletsListResponce{}
+
+	path := fmt.Sprintf("/v1/lists/%d/toggle-follow", listID)
+
+	if err := c.makeRequest(ctx, http.MethodPost, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to toggle follow wallet list: %w", err)
+	}
+
+	return &resp, nil
+}

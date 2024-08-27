@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/sealtv/cielogo/api"
@@ -30,18 +31,20 @@ func NewClient(apiKey string) *Client {
 	}
 }
 
-func (c *Client) makeRequest(ctx context.Context, method, path string, body, out any) error {
+func (c *Client) makeRequest(ctx context.Context, method, path string, bodyObj, out any) error {
 	url := apiBaseUrl + path
 
-	var buf *bytes.Buffer
-	if body != nil {
-		buf = new(bytes.Buffer)
-		if err := json.NewEncoder(buf).Encode(body); err != nil {
+	var body io.Reader
+	if bodyObj != nil {
+		buf := new(bytes.Buffer)
+		if err := json.NewEncoder(buf).Encode(bodyObj); err != nil {
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
+
+		body = buf
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -56,7 +59,6 @@ func (c *Client) makeRequest(ctx context.Context, method, path string, body, out
 	}
 	defer resp.Body.Close()
 
-	fmt.Println(resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
 		var cErr error = &api.Error{}
 		if err := json.NewDecoder(resp.Body).Decode(cErr); err != nil {
@@ -66,7 +68,7 @@ func (c *Client) makeRequest(ctx context.Context, method, path string, body, out
 		return cErr
 	}
 
-	if resp != nil {
+	if resp != nil && out != nil {
 		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
 			return fmt.Errorf("failed to unmarshal response body: %w", err)
 		}
