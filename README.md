@@ -1,6 +1,6 @@
 # CieloGo
 
-CieloGo is a Go client library for interacting with the Cielo Finance API, allowing developers to easily access wallet analytics, pnl stats, related wallets, and wallet tags through a simple and intuitive interface. Built for efficiency and ease of use, CieloGo abstracts the complexity of direct API calls into straightforward Go functions.
+CieloGo is a Go client library for interacting with the [Cielo Finance API](https://api-info.cielo.finance/), allowing developers to easily access wallet analytics, pnl stats, related wallets, and wallet tags through a simple and intuitive interface. Built for efficiency and ease of use, CieloGo abstracts the complexity of direct API calls into straightforward Go functions.
 
 Please note, CieloGo is an unofficial client library and is not endorsed or maintained by Cielo Finance.
 
