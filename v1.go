@@ -213,3 +213,51 @@ func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*
 
 	return &resp, nil
 }
+
+// GetTrackedWalletsV1 returns a list of tracked wallets.
+// https://developer.cielo.finance/reference/gettrackedwallets
+func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedWalletsRequest) (*apiv1.GetTrackedWalletsResponse, error) {
+	const path = "/v1/tracked-wallets"
+
+	values := url.Values{}
+
+	if req.ListID != nil && *req.ListID != 0 {
+		values.Add("list_id", fmt.Sprintf("%d", *req.ListID))
+	}
+
+	if req.NextObject != nil && *req.NextObject != "" {
+		values.Add("next_object", *req.NextObject)
+	}
+
+	resp := api.CieloResponse[apiv1.GetTrackedWalletsResponse]{}
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get tracked wallets: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// AddTrackedWalletsV1 adds a wallet to tracked wallets.
+// https://developer.cielo.finance/reference/addtrackedwallet
+func (c *Client) AddTrackedWalletsV1(ctx context.Context, req *apiv1.AddTrackedWalletRequest) (*apiv1.TrackedWallet, error) {
+	const path = "/v1/tracked-wallets"
+
+	resp := api.CieloResponse[apiv1.TrackedWallet]{}
+	if err := c.makeRequest(ctx, http.MethodPost, path, req, &resp); err != nil {
+		return nil, fmt.Errorf("failed to add tracked wallet: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// RemoveTrackedWalletsV1 deletes a tracked wallet.
+// https://developer.cielo.finance/reference/removetrackedwallets
+func (c *Client) RemoveTrackedWalletsV1(ctx context.Context, req *apiv1.RemoveTrackedWalletsRequest) error {
+	const path = "/v1/tracked-wallets"
+
+	if err := c.makeRequest(ctx, http.MethodDelete, path, req, nil); err != nil {
+		return fmt.Errorf("failed to delete tracked wallet: %w", err)
+	}
+
+	return nil
+}
