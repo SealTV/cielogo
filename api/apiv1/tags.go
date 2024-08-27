@@ -35,13 +35,6 @@ type Tag struct {
 	Description string  `json:"description"`
 }
 
-type WalletType string
-
-const (
-	WalletTypeEvm    WalletType = "evm"
-	WalletTypeSolana WalletType = "solana"
-)
-
 type GetWalletsByTagRequest struct {
 	Tags       []TagType   `json:"tags"`
 	WalletType *WalletType `json:"wallet_type,omitempty"`
