@@ -1,5 +1,10 @@
 # CieloGo
 
+[![CI](https://github.com/SealTV/cielogo/actions/workflows/ci.yml/badge.svg)](https://github.com/SealTV/cielogo/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/SealTV/cielogo/branch/main/graph/badge.svg)](https://codecov.io/gh/SealTV/cielogo)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sealtv/cielogo)](https://goreportcard.com/report/github.com/sealtv/cielogo)
+[![Go Reference](https://pkg.go.dev/badge/github.com/sealtv/cielogo.svg)](https://pkg.go.dev/github.com/sealtv/cielogo)
+
 CieloGo is a Go client library for interacting with the [Cielo Finance API](https://api-info.cielo.finance/), allowing developers to easily access wallet analytics, pnl stats, related wallets, and wallet tags through a simple and intuitive interface. Built for efficiency and ease of use, CieloGo abstracts the complexity of direct API calls into straightforward Go functions.
 
 Please note, CieloGo is an unofficial client library and is not endorsed or maintained by Cielo Finance.

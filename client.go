@@ -14,25 +14,49 @@ import (
 const apiBaseUrl = "https://feed-api.cielo.finance/api"
 
 type Client struct {
-	apiKey string
-	cli    *http.Client
+	apiKey  string
+	baseURL string
+	cli     *http.Client
 }
 
-func NewClient(apiKey string) *Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+// ClientOption is a function that configures a Client
+type ClientOption func(*Client)
 
+// WithHTTPClient sets a custom HTTP client
+func WithHTTPClient(client *http.Client) ClientOption {
+	return func(c *Client) {
+		c.cli = client
+	}
+}
+
+// WithBaseURL sets a custom base URL (useful for testing)
+func WithBaseURL(baseURL string) ClientOption {
+	return func(c *Client) {
+		c.baseURL = baseURL
+	}
+}
+
+func NewClient(apiKey string, opts ...ClientOption) *Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConnsPerHost = 100
 
-	return &Client{
-		apiKey: apiKey,
+	client := &Client{
+		apiKey:  apiKey,
+		baseURL: apiBaseUrl,
 		cli: &http.Client{
 			Transport: transport,
 		},
 	}
+
+	for _, opt := range opts {
+		opt(client)
+	}
+
+	return client
 }
 
 func (c *Client) makeRequest(ctx context.Context, method, path string, bodyObj, out any) error {
-	url := apiBaseUrl + path
+	url := c.baseURL + path
 
 	var body io.Reader
 	if bodyObj != nil {
