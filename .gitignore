@@ -21,3 +21,7 @@
 go.work
 
 cmd*
+
+# AI-assisted development documentation (internal use only)
+CLAUDE.md
+.docs/

@@ -74,6 +74,10 @@ func (c *Client) GetRelatedWalletsV1(ctx context.Context, req *apiv1.RelatedWall
 }
 
 // GetWalletTagsV1 returns a list of wallet tags for a given wallet.
+//
+// Deprecated: This endpoint is deprecated by the Cielo Finance API.
+// Use GetWalletsTagsV1 instead, which supports batch operations for up to 50 wallets.
+//
 // https://developer.cielo.finance/reference/getwallettags
 func (c *Client) GetWalletTagsV1(ctx context.Context, req *apiv1.GetWalletTagsRequest) (*apiv1.GetWalletTagsResponse, error) {
 	resp := api.CieloResponse[apiv1.GetWalletTagsResponse]{}
@@ -226,7 +230,7 @@ func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*
 
 	path := fmt.Sprintf("/v1/lists/%d/toggle-follow", listID)
 
-	if err := c.makeRequest(ctx, http.MethodPost, path, nil, &resp); err != nil {
+	if err := c.makeRequest(ctx, http.MethodPut, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to toggle follow wallet list: %w", err)
 	}
 
@@ -279,4 +283,157 @@ func (c *Client) RemoveTrackedWalletsV1(ctx context.Context, req *apiv1.RemoveTr
 	}
 
 	return nil
+}
+
+// Portfolio
+
+// GetWalletPortfolioV1 retrieves the portfolio of a wallet including token balances and USD values.
+// For Solana wallets, the response also includes the native SOL balance.
+// Portfolio assets with a total_usd_value of zero are excluded from the response.
+//
+// Supported chains: Solana, EVM (Ethereum, Base, HyperEVM)
+// Cost: 20 credits per request
+//
+// https://developer.cielo.finance/reference/getWalletPortfolio
+func (c *Client) GetWalletPortfolioV1(ctx context.Context, wallet string) (*apiv1.WalletPortfolioResponse, error) {
+	resp := api.CieloResponse[apiv1.WalletPortfolioResponse]{}
+
+	path := fmt.Sprintf("/v1/%s/portfolio", wallet)
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get wallet portfolio: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// GetWalletPortfolioV2 retrieves the portfolio of one or multiple wallets with optional token filtering.
+// Supports comma-separated wallet addresses for aggregated portfolio view.
+// Each token in the response includes a wallet_address field indicating which wallet holds it.
+//
+// When a token parameter is provided (Solana wallets only):
+//   - Only supported for Solana wallets - returns error for EVM/Sui wallets
+//   - Returns only the specified token's balance information
+//   - Response format changes to a single token object instead of portfolio object
+//   - Returns 404 if the token is not found in the wallet
+//
+// When multiple wallets are provided:
+//   - Token filtering is not supported and will return an error
+//   - Portfolios are fetched in parallel for better performance
+//   - Tokens are sorted by total_usd_value in descending order
+//   - Total USD and chain distributions are aggregated across all wallets
+//
+// Supported chains: Solana, EVM (Ethereum, Base, HyperEVM), Sui
+// Cost: 20 credits per wallet
+//
+// https://developer.cielo.finance/reference/getWalletPortfolioV2
+func (c *Client) GetWalletPortfolioV2(ctx context.Context, req *apiv1.WalletPortfolioV2Request) (*apiv1.WalletPortfolioV2Response, error) {
+	resp := api.CieloResponse[apiv1.WalletPortfolioV2Response]{}
+
+	path := fmt.Sprintf("/v2/portfolio?%s", req.GetQueryString())
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get wallet portfolio v2: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// Token Information
+
+// GetTokenMetadataV1 retrieves detailed metadata for a specified token including
+// name, symbol, decimals, creation details, social links, and supply information.
+//
+// Supported chains: solana, ethereum, base, hyperevm
+// Cost: 1 credit per request
+//
+// https://developer.cielo.finance/reference/getTokenMetadata
+func (c *Client) GetTokenMetadataV1(ctx context.Context, req *apiv1.TokenMetadataRequest) (*apiv1.TokenMetadataResponse, error) {
+	resp := api.CieloResponse[apiv1.TokenMetadataResponse]{}
+
+	path := fmt.Sprintf("/v1/token/metadata?%s", req.GetQueryString())
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get token metadata: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// GetTokenPriceV1 retrieves the current price in USD for a specified token.
+//
+// Supported chains: solana, ethereum, base, hyperevm
+// Cost: 1 credit per request
+//
+// https://developer.cielo.finance/reference/getTokenPrice
+func (c *Client) GetTokenPriceV1(ctx context.Context, req *apiv1.TokenPriceRequest) (*apiv1.TokenPriceResponse, error) {
+	resp := api.CieloResponse[apiv1.TokenPriceResponse]{}
+
+	path := fmt.Sprintf("/v1/token/price?%s", req.GetQueryString())
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get token price: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// GetTokenStatsV1 retrieves comprehensive statistics for a specified token including
+// price changes, volume metrics, market cap, and unique trader counts across
+// multiple time periods (5m, 1h, 6h, 24h).
+//
+// Supported chains: solana, ethereum, base, hyperevm
+// Cost: 3 credits per request
+//
+// https://developer.cielo.finance/reference/getTokenStats
+func (c *Client) GetTokenStatsV1(ctx context.Context, req *apiv1.TokenStatsRequest) (*apiv1.TokenStatsResponse, error) {
+	resp := api.CieloResponse[apiv1.TokenStatsResponse]{}
+
+	path := fmt.Sprintf("/v1/token/stats?%s", req.GetQueryString())
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get token stats: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// GetTokenBalanceV1 retrieves the balance of a specific token for a given wallet,
+// including the token's current price and total USD value.
+//
+// Supported chains: solana, ethereum, base, hyperevm
+// Cost: 3 credits per request
+//
+// https://developer.cielo.finance/reference/getTokenBalance
+func (c *Client) GetTokenBalanceV1(ctx context.Context, req *apiv1.TokenBalanceRequest) (*apiv1.TokenBalanceResponse, error) {
+	resp := api.CieloResponse[apiv1.TokenBalanceResponse]{}
+
+	path := fmt.Sprintf("/v1/%s/token-balance?%s", req.Wallet, req.GetQueryString())
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get token balance: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// Trading Analytics
+
+// GetTradingStatsV1 retrieves detailed performance statistics for a wallet's trading activity,
+// including PnL, ROI, win rate, and trading behavior insights.
+//
+// Note: This endpoint may return 202 Accepted if data is not ready yet.
+// In that case, retry the request after 10 seconds.
+//
+// Cost: 30 credits per request
+//
+// https://developer.cielo.finance/reference/getTradingStats
+func (c *Client) GetTradingStatsV1(ctx context.Context, req *apiv1.TradingStatsRequest) (*apiv1.TradingStatsResponse, error) {
+	resp := api.CieloResponse[apiv1.TradingStatsResponse]{}
+
+	path := fmt.Sprintf("/v1/%s/trading-stats", req.Wallet)
+	queryString := req.GetQueryString()
+	if queryString != "" {
+		path = fmt.Sprintf("%s?%s", path, queryString)
+	}
+
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get trading stats: %w", err)
+	}
+
+	return &resp.Data, nil
 }
