@@ -17,6 +17,7 @@ const (
 	Evmos        ChainType = "evmos"
 	Fantom       ChainType = "fantom"
 	Gnosis       ChainType = "gnosis"
+	Hyperevm     ChainType = "hyperevm"
 	Linea        ChainType = "linea"
 	Mantle       ChainType = "mantle"
 	Metis        ChainType = "metis"
