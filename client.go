@@ -37,7 +37,11 @@ func WithBaseURL(baseURL string) ClientOption {
 }
 
 func NewClient(apiKey string, opts ...ClientOption) *Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		transport = &http.Transport{}
+	}
+	transport = transport.Clone()
 	transport.MaxIdleConnsPerHost = 100
 
 	client := &Client{
@@ -73,7 +77,7 @@ func (c *Client) makeRequest(ctx context.Context, method, path string, bodyObj, 
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Add("X-API-KEY", c.apiKey)
+	req.Header.Add("X-Api-Key", c.apiKey)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 

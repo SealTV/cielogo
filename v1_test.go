@@ -2,8 +2,6 @@ package cielogo_test
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/sealtv/cielogo"
@@ -284,15 +282,4 @@ func TestClient_ContextCancellation(t *testing.T) {
 	_, err := client.GetWalletPortfolioV1(ctx, "wallet123")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "context canceled")
-}
-
-// Helper function to create a test HTTP handler
-func createTestHandler(t *testing.T, response interface{}) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		err := json.NewEncoder(w).Encode(response)
-		if err != nil {
-			t.Fatalf("Failed to encode response: %v", err)
-		}
-	})
 }
