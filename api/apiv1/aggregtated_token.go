@@ -1,8 +1,8 @@
 package apiv1
 
 import (
-	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/sealtv/cielogo/api/chains"
@@ -42,7 +42,7 @@ func (r *AggregatedTokenPnLRequest) GetQueryString() string {
 
 	// Add CexTransfers if specified
 	if r.CexTransfers != nil {
-		values.Add("cex_transfers", fmt.Sprintf("%t", *r.CexTransfers))
+		values.Add("cex_transfers", strconv.FormatBool(*r.CexTransfers))
 	}
 
 	return values.Encode()

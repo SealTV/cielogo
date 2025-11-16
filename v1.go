@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/sealtv/cielogo/api"
 	"github.com/sealtv/cielogo/api/apiv1"
@@ -124,7 +125,7 @@ func (c *Client) GetWalletsByTagV1(ctx context.Context, req *apiv1.GetWalletsByT
 	}
 
 	if req.Limit != nil {
-		values.Add("limit", fmt.Sprintf("%d", *req.Limit))
+		values.Add("limit", strconv.Itoa(*req.Limit))
 	}
 
 	if req.NextObject != nil && *req.NextObject != "" {
@@ -245,7 +246,7 @@ func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedW
 	values := url.Values{}
 
 	if req.ListID != nil && *req.ListID != 0 {
-		values.Add("list_id", fmt.Sprintf("%d", *req.ListID))
+		values.Add("list_id", strconv.FormatInt(*req.ListID, 10))
 	}
 
 	if req.NextObject != nil && *req.NextObject != "" {

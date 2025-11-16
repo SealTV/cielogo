@@ -3,6 +3,7 @@ package apiv1
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/sealtv/cielogo/api/chains"
@@ -43,11 +44,11 @@ func (r *FeedRequest) GetQueryString() string {
 	}
 
 	if r.Limit != nil {
-		values.Add("limit", fmt.Sprintf("%d", *r.Limit))
+		values.Add("limit", strconv.Itoa(*r.Limit))
 	}
 
 	if r.List != nil {
-		values.Add("list", fmt.Sprintf("%d", *r.List))
+		values.Add("list", strconv.Itoa(*r.List))
 	}
 
 	if len(r.Chains) > 0 {
@@ -77,7 +78,7 @@ func (r *FeedRequest) GetQueryString() string {
 	}
 
 	if r.NewTrades != nil {
-		values.Add("newTrades", fmt.Sprintf("%t", *r.NewTrades))
+		values.Add("newTrades", strconv.FormatBool(*r.NewTrades))
 	}
 
 	if r.StartFrom != nil {
@@ -85,11 +86,11 @@ func (r *FeedRequest) GetQueryString() string {
 	}
 
 	if r.FromTimestamp != nil {
-		values.Add("fromTimestamp", fmt.Sprintf("%d", *r.FromTimestamp))
+		values.Add("fromTimestamp", strconv.FormatInt(*r.FromTimestamp, 10))
 	}
 
 	if r.ToTimestamp != nil {
-		values.Add("toTimestamp", fmt.Sprintf("%d", *r.ToTimestamp))
+		values.Add("toTimestamp", strconv.FormatInt(*r.ToTimestamp, 10))
 	}
 
 	return values.Encode()
