@@ -39,9 +39,11 @@ func NewMockServer(t *testing.T) *MockServer {
 
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(map[string]string{
+			if err := json.NewEncoder(w).Encode(map[string]string{
 				"error": "not found",
-			})
+			}); err != nil {
+				t.Logf("Failed to encode 404 response: %v", err)
+			}
 			return
 		}
 
@@ -51,7 +53,9 @@ func NewMockServer(t *testing.T) *MockServer {
 		}
 	}))
 
-	t.Cleanup(ms.Server.Close)
+	t.Cleanup(func() {
+		ms.Close()
+	})
 	return ms
 }
 
