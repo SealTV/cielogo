@@ -2,20 +2,20 @@ package apiv1
 
 import "fmt"
 
-type RelatedWalletsSoring string
+type RelatedWalletsSorting string
 
 const (
-	RelatedWalletsSoringInflowAsc        RelatedWalletsSoring = "inflow_asc"
-	RelatedWalletsSoringInflowDesc       RelatedWalletsSoring = "inflow_desc"
-	RelatedWalletsSoringOutflowAsc       RelatedWalletsSoring = "outflow_asc"
-	RelatedWalletsSoringOutflowDesc      RelatedWalletsSoring = "outflow_desc"
-	RelatedWalletsSoringTransactionsAsc  RelatedWalletsSoring = "transactions_asc"
-	RelatedWalletsSoringTransactionsDesc RelatedWalletsSoring = "transactions_desc"
+	RelatedWalletsSortingInflowAsc        RelatedWalletsSorting = "inflow_asc"
+	RelatedWalletsSortingInflowDesc       RelatedWalletsSorting = "inflow_desc"
+	RelatedWalletsSortingOutflowAsc       RelatedWalletsSorting = "outflow_asc"
+	RelatedWalletsSortingOutflowDesc      RelatedWalletsSorting = "outflow_desc"
+	RelatedWalletsSortingTransactionsAsc  RelatedWalletsSorting = "transactions_asc"
+	RelatedWalletsSortingTransactionsDesc RelatedWalletsSorting = "transactions_desc"
 )
 
 type RelatedWalletsRequest struct {
-	Wallet       string                `json:"wallet"`
-	SortCriteria *RelatedWalletsSoring `json:"sort_criteria,omitempty"`
+	Wallet       string                 `json:"wallet"`
+	SortCriteria *RelatedWalletsSorting `json:"sort_criteria,omitempty"`
 }
 
 func (r *RelatedWalletsRequest) GetQueryString() string {

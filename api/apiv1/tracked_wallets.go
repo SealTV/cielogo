@@ -20,6 +20,14 @@ type AddTrackedWalletRequest struct {
 	Wallet string `json:"wallet"`
 	Label  string `json:"label"`
 	ListID *int64 `json:"list_id,omitempty"`
+	// Notification settings
+	BundleID         *int64   `json:"bundle_id,omitempty"`
+	MinAmountUSD     *float64 `json:"min_amount_usd,omitempty"`
+	Filters          []int    `json:"filters,omitempty"`
+	Chains           []int    `json:"chains,omitempty"`
+	NewTrades        *bool    `json:"new_trades,omitempty"`
+	TelegramBotID    *int     `json:"telegram_bot_id,omitempty"`
+	DiscordChannelID *string  `json:"discord_channel_id,omitempty"`
 }
 
 type RemoveTrackedWalletsRequest struct {

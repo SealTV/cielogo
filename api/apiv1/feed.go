@@ -34,6 +34,11 @@ type FeedRequest struct {
 	FromTimestamp *int64
 	// Filter transactions to a specific UNIX timestamp.
 	ToTimestamp *int64
+	// Set a maximum USD value for transactions (upper bound filter).
+	MaxUSD *float64
+	// Include market cap data in the response.
+	// WARNING: Setting this to true DOUBLES the credit cost (10 credits instead of 5, or 6 instead of 3 when filtered by wallet).
+	IncludeMarketCap *bool
 }
 
 func (r *FeedRequest) GetQueryString() string {
@@ -91,6 +96,14 @@ func (r *FeedRequest) GetQueryString() string {
 
 	if r.ToTimestamp != nil {
 		values.Add("toTimestamp", strconv.FormatInt(*r.ToTimestamp, 10))
+	}
+
+	if r.MaxUSD != nil {
+		values.Add("maxUSD", fmt.Sprintf("%f", *r.MaxUSD))
+	}
+
+	if r.IncludeMarketCap != nil {
+		values.Add("includeMarketCap", strconv.FormatBool(*r.IncludeMarketCap))
 	}
 
 	return values.Encode()

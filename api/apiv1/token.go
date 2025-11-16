@@ -9,12 +9,13 @@ import (
 )
 
 type TokensPnLRequest struct {
-	Wallet       string
-	Chains       []chains.ChainType
-	Timeframe    *string
-	NextObject   *string
-	CexTransfers *bool
-	Tokens       []string
+	Wallet              string
+	Chains              []chains.ChainType
+	Timeframe           *string
+	NextObject          *string
+	CexTransfers        *bool
+	Tokens              []string
+	ActivePositionsOnly *bool
 }
 
 func (r *TokensPnLRequest) GetQueryString() string {
@@ -47,6 +48,11 @@ func (r *TokensPnLRequest) GetQueryString() string {
 	// Add Tokens if specified
 	if len(r.Tokens) > 0 {
 		values.Add("token", strings.Join(r.Tokens, ","))
+	}
+
+	// Add ActivePositionsOnly if specified
+	if r.ActivePositionsOnly != nil {
+		values.Add("active_positions_only", strconv.FormatBool(*r.ActivePositionsOnly))
 	}
 
 	return values.Encode()

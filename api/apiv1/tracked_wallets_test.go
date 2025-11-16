@@ -319,3 +319,112 @@ func TestTrackedWallet_JSON(t *testing.T) {
 	require.NotNil(t, decoded.ListID)
 	assert.Equal(t, *wallet.ListID, *decoded.ListID)
 }
+
+func TestAddTrackedWalletRequest_JSON_WithNotifications(t *testing.T) {
+	bundleID := int64(100)
+	minAmountUSD := 50.75
+	newTrades := true
+	telegramBotID := 42
+	discordChannelID := "channel-123"
+
+	req := apiv1.AddTrackedWalletRequest{
+		Wallet:           "0x1234567890abcdef1234567890abcdef12345678",
+		Label:            "Whale Wallet",
+		BundleID:         &bundleID,
+		MinAmountUSD:     &minAmountUSD,
+		Filters:          []int{1, 2, 3},
+		Chains:           []int{1, 56, 137},
+		NewTrades:        &newTrades,
+		TelegramBotID:    &telegramBotID,
+		DiscordChannelID: &discordChannelID,
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var decoded apiv1.AddTrackedWalletRequest
+	err = json.Unmarshal(data, &decoded)
+	require.NoError(t, err)
+
+	assert.Equal(t, req.Wallet, decoded.Wallet)
+	assert.Equal(t, req.Label, decoded.Label)
+	require.NotNil(t, decoded.BundleID)
+	assert.Equal(t, *req.BundleID, *decoded.BundleID)
+	require.NotNil(t, decoded.MinAmountUSD)
+	assert.InDelta(t, *req.MinAmountUSD, *decoded.MinAmountUSD, 0.01)
+	assert.Equal(t, req.Filters, decoded.Filters)
+	assert.Equal(t, req.Chains, decoded.Chains)
+	require.NotNil(t, decoded.NewTrades)
+	assert.Equal(t, *req.NewTrades, *decoded.NewTrades)
+	require.NotNil(t, decoded.TelegramBotID)
+	assert.Equal(t, *req.TelegramBotID, *decoded.TelegramBotID)
+	require.NotNil(t, decoded.DiscordChannelID)
+	assert.Equal(t, *req.DiscordChannelID, *decoded.DiscordChannelID)
+}
+
+func TestAddTrackedWalletRequest_JSON_PartialNotifications(t *testing.T) {
+	minAmountUSD := 100.0
+	req := apiv1.AddTrackedWalletRequest{
+		Wallet:       "0x1234567890abcdef1234567890abcdef12345678",
+		Label:        "Test Wallet",
+		MinAmountUSD: &minAmountUSD,
+		Chains:       []int{1},
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	// Verify that only specified fields are present
+	jsonStr := string(data)
+	assert.Contains(t, jsonStr, "min_amount_usd")
+	assert.Contains(t, jsonStr, "chains")
+	assert.NotContains(t, jsonStr, "bundle_id")
+	assert.NotContains(t, jsonStr, "telegram_bot_id")
+	assert.NotContains(t, jsonStr, "discord_channel_id")
+
+	var decoded apiv1.AddTrackedWalletRequest
+	err = json.Unmarshal(data, &decoded)
+	require.NoError(t, err)
+
+	assert.Equal(t, req.Wallet, decoded.Wallet)
+	require.NotNil(t, decoded.MinAmountUSD)
+	assert.Equal(t, req.Chains, decoded.Chains)
+	assert.Nil(t, decoded.BundleID)
+	assert.Nil(t, decoded.NewTrades)
+	assert.Nil(t, decoded.TelegramBotID)
+	assert.Nil(t, decoded.DiscordChannelID)
+}
+
+func TestAddTrackedWalletRequest_JSON_NoNotifications(t *testing.T) {
+	req := apiv1.AddTrackedWalletRequest{
+		Wallet: "0x1234567890abcdef1234567890abcdef12345678",
+		Label:  "Simple Wallet",
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	// Verify that notification fields are omitted
+	jsonStr := string(data)
+	assert.NotContains(t, jsonStr, "bundle_id")
+	assert.NotContains(t, jsonStr, "min_amount_usd")
+	assert.NotContains(t, jsonStr, "filters")
+	assert.NotContains(t, jsonStr, "chains")
+	assert.NotContains(t, jsonStr, "new_trades")
+	assert.NotContains(t, jsonStr, "telegram_bot_id")
+	assert.NotContains(t, jsonStr, "discord_channel_id")
+
+	var decoded apiv1.AddTrackedWalletRequest
+	err = json.Unmarshal(data, &decoded)
+	require.NoError(t, err)
+
+	assert.Equal(t, req.Wallet, decoded.Wallet)
+	assert.Equal(t, req.Label, decoded.Label)
+	assert.Nil(t, decoded.BundleID)
+	assert.Nil(t, decoded.MinAmountUSD)
+	assert.Nil(t, decoded.Filters)
+	assert.Nil(t, decoded.Chains)
+	assert.Nil(t, decoded.NewTrades)
+	assert.Nil(t, decoded.TelegramBotID)
+	assert.Nil(t, decoded.DiscordChannelID)
+}

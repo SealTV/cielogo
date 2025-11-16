@@ -213,9 +213,17 @@ func (c *Client) UpdateWalletsListV1(ctx context.Context, req *apiv1.UpdateWalle
 }
 
 // DeleteWalletsListV1 deletes a wallet list.
+// If deleteWallets is true, all wallets in the list will also be deleted.
+// If deleteWallets is false, only the list itself is deleted, wallets are preserved.
+//
 // https://developer.cielo.finance/reference/deleteuserlist
-func (c *Client) DeleteWalletsListV1(ctx context.Context, listID int64) error {
+func (c *Client) DeleteWalletsListV1(ctx context.Context, listID int64, deleteWallets bool) error {
 	path := fmt.Sprintf("/v1/lists/%d", listID)
+
+	// Add query parameter if deleteWallets is true
+	if deleteWallets {
+		path += "?delete_wallets=true"
+	}
 
 	if err := c.makeRequest(ctx, http.MethodDelete, path, nil, nil); err != nil {
 		return fmt.Errorf("failed to delete wallet list: %w", err)
