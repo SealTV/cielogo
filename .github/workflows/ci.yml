@@ -30,17 +30,6 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
 
-      - name: Run go vet
-        run: go vet ./...
-
-      - name: Run go fmt check
-        run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-            echo "Go code is not formatted:"
-            gofmt -s -d .
-            exit 1
-          fi
-
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
 
@@ -80,9 +69,9 @@ jobs:
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          version: v2.1
           args: --timeout=5m
 
   build:
