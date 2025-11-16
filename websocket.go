@@ -2,6 +2,7 @@ package cielogo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -24,9 +25,12 @@ type WebsocketClient struct {
 }
 
 func (c *Client) NewWebsocketConnection(ctx context.Context, opts ...WebsocketOption) (*WebsocketClient, error) {
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
 		"X-API-KEY": []string{c.apiKey},
 	})
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to open websocket connection: %w", err)
 	}
@@ -69,7 +73,7 @@ func (ws *WebsocketClient) RunListener(ctx context.Context, out chan<- apiv1.WSE
 				return fmt.Errorf("unexpected close error: %w", err)
 			}
 
-			if err == websocket.ErrCloseSent {
+			if errors.Is(err, websocket.ErrCloseSent) {
 				return nil
 			}
 		}
@@ -110,6 +114,6 @@ func WithPongHandler(h func(appData string) error) WebsocketOption {
 
 func WithDeadline(t time.Time) WebsocketOption {
 	return func(ws *WebsocketClient) {
-		ws.conn.SetReadDeadline(t)
+		_ = ws.conn.SetReadDeadline(t) // Ignore error as it's used in option pattern
 	}
 }

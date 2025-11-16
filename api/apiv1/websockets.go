@@ -126,7 +126,7 @@ func (e *WSEvent) UnmarshalJSON(b []byte) error {
 	var err error
 	switch tmp.Type {
 	case ErrEventType:
-		var data ErrorEvent
+		var data WSEventError
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
 			e.Data = data
 		}
@@ -166,8 +166,8 @@ func (e *WSEvent) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type ErrorEvent string
+type WSEventError string
 
-func (err ErrorEvent) Error() string {
+func (err WSEventError) Error() string {
 	return string(err)
 }

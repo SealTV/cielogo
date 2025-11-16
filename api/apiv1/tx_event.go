@@ -70,54 +70,61 @@ func (t *TxEvent) UnmarshalJSON(data []byte) error {
 	t.Timestamp = tmp.Timestamp
 	t.Block = tmp.Block
 
-	switch tmp.TxType {
-	case TxTypeBridge:
-		t.Data = &BridgeEvent{}
-	case TxTypeLending:
-		t.Data = &LendingEvent{}
-	case TxTypeLP:
-		t.Data = &LpEvent{}
-	case TxTypeNftLending:
-		t.Data = &NftLendingEvent{}
-	case TxTypeNftMitnt:
-		t.Data = &NftMintEvent{}
-	case TxTypeNftTrade:
-		t.Data = &NftTradeEvent{}
-	case TxTypeNftTransfer:
-		t.Data = &NftTransferEvent{}
-	case TxTypeSwap:
-		t.Data = &SwapEvent{}
-	case TxTypeTransfer:
-		t.Data = &TransferEvent{}
-	case TxTypeContractCreation:
-		t.Data = &ContractCreationEvent{}
-	case TxTypeContractInteraction:
-		t.Data = &ContractInteractionEvent{}
-	case TxTypeFlashloan:
-		t.Data = &FlashloanEvent{}
-	case TxTypeNftLiquidation:
-		t.Data = &NftLiquidationEvent{}
-	case TxTypeNftSweep:
-		t.Data = &NftSweepEvent{}
-	case TxTypeOption:
-		t.Data = &OptionEvent{}
-	case TxTypePerp:
-		t.Data = &PerpEvent{}
-	case TxTypeReward:
-		t.Data = &RewardEvent{}
-	case TxTypeStaking:
-		t.Data = &StakingEvent{}
-	case TxTypeSudoPool:
-		t.Data = &SudoPoolEvent{}
-	case TxTypeWrap:
-		t.Data = &WrapEvent{}
-	}
+	t.Data = createTransactionEventByType(tmp.TxType)
 
 	if err := json.Unmarshal(data, t.Data); err != nil {
 		return fmt.Errorf("failed to unmarshal tx event %q data: %w", string(t.TxType), err)
 	}
 
 	return nil
+}
+
+// createTransactionEventByType creates the appropriate TransactionEvent based on the transaction type.
+func createTransactionEventByType(txType TxType) TransactionEvent {
+	switch txType {
+	case TxTypeBridge:
+		return &BridgeEvent{}
+	case TxTypeLending:
+		return &LendingEvent{}
+	case TxTypeLP:
+		return &LpEvent{}
+	case TxTypeNftLending:
+		return &NftLendingEvent{}
+	case TxTypeNftMitnt:
+		return &NftMintEvent{}
+	case TxTypeNftTrade:
+		return &NftTradeEvent{}
+	case TxTypeNftTransfer:
+		return &NftTransferEvent{}
+	case TxTypeSwap:
+		return &SwapEvent{}
+	case TxTypeTransfer:
+		return &TransferEvent{}
+	case TxTypeContractCreation:
+		return &ContractCreationEvent{}
+	case TxTypeContractInteraction:
+		return &ContractInteractionEvent{}
+	case TxTypeFlashloan:
+		return &FlashloanEvent{}
+	case TxTypeNftLiquidation:
+		return &NftLiquidationEvent{}
+	case TxTypeNftSweep:
+		return &NftSweepEvent{}
+	case TxTypeOption:
+		return &OptionEvent{}
+	case TxTypePerp:
+		return &PerpEvent{}
+	case TxTypeReward:
+		return &RewardEvent{}
+	case TxTypeStaking:
+		return &StakingEvent{}
+	case TxTypeSudoPool:
+		return &SudoPoolEvent{}
+	case TxTypeWrap:
+		return &WrapEvent{}
+	default:
+		return nil
+	}
 }
 
 type TransactionEvent interface {
