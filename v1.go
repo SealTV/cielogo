@@ -286,6 +286,73 @@ func (c *Client) RemoveTrackedWalletsV1(ctx context.Context, req *apiv1.RemoveTr
 	return nil
 }
 
+// GetWalletByAddressV1 retrieves a tracked wallet by its wallet address.
+// Returns 404 if the wallet is not being tracked.
+//
+// Cost: 5 credits per request
+//
+// https://developer.cielo.finance/reference/getWalletByAddress
+func (c *Client) GetWalletByAddressV1(ctx context.Context, wallet string) (*apiv1.TrackedWallet, error) {
+	resp := api.CieloResponse[apiv1.TrackedWallet]{}
+
+	path := fmt.Sprintf("/v1/tracked-wallets/address/%s", wallet)
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get wallet by address: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// UpdateTrackedWalletV1 updates a tracked wallet by its wallet ID.
+//
+// Cost: 5 credits per request
+//
+// https://developer.cielo.finance/reference/updateTrackedWalletV1
+func (c *Client) UpdateTrackedWalletV1(ctx context.Context, walletID int64, req *apiv1.UpdateTrackedWalletRequest) (*apiv1.TrackedWallet, error) {
+	resp := api.CieloResponse[apiv1.TrackedWallet]{}
+
+	path := fmt.Sprintf("/v1/tracked-wallets/%d", walletID)
+	if err := c.makeRequest(ctx, http.MethodPut, path, req, &resp); err != nil {
+		return nil, fmt.Errorf("failed to update tracked wallet: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// UpdateTrackedWalletV2 updates a tracked wallet by its wallet address with support for partial updates.
+// All fields are optional and only provided fields will be updated.
+//
+// Cost: 5 credits per request
+//
+// https://developer.cielo.finance/reference/updateTrackedWalletV2
+func (c *Client) UpdateTrackedWalletV2(ctx context.Context, wallet string, req *apiv1.UpdateTrackedWalletV2Request) (*apiv1.TrackedWallet, error) {
+	resp := api.CieloResponse[apiv1.TrackedWallet]{}
+
+	path := fmt.Sprintf("/v2/tracked-wallets/%s", wallet)
+	if err := c.makeRequest(ctx, http.MethodPut, path, req, &resp); err != nil {
+		return nil, fmt.Errorf("failed to update tracked wallet v2: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
+// GetTelegramBotsV1 retrieves the list of available Telegram bots for notifications.
+// Only returns bots where available=true.
+//
+// Cost: 5 credits per request
+//
+// https://developer.cielo.finance/reference/getTelegramBots
+func (c *Client) GetTelegramBotsV1(ctx context.Context) (*apiv1.GetTelegramBotsResponse, error) {
+	resp := api.CieloResponse[apiv1.GetTelegramBotsResponse]{}
+
+	const path = "/v1/tracked-wallets/telegram-bots"
+	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get telegram bots: %w", err)
+	}
+
+	return &resp.Data, nil
+}
+
 // Portfolio
 
 // GetWalletPortfolioV1 retrieves the portfolio of a wallet including token balances and USD values.

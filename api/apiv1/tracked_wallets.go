@@ -45,3 +45,41 @@ type TrackedWallet struct {
 	ListID *int64      `json:"list_id,omitempty"`
 	List   *WalletList `json:"list,omitempty"`
 }
+
+// UpdateTrackedWalletRequest is used to update a tracked wallet by its ID (V1).
+type UpdateTrackedWalletRequest struct {
+	Wallet string `json:"wallet"`
+	Label  string `json:"label"`
+	ListID *int64 `json:"list_id,omitempty"`
+}
+
+// UpdateTrackedWalletV2Request is used to update a tracked wallet by its address (V2).
+// All fields are optional and only provided fields will be updated.
+type UpdateTrackedWalletV2Request struct {
+	Label          *string  `json:"label,omitempty"`
+	ListID         *int     `json:"list_id,omitempty"`
+	MinUSD         *float64 `json:"min_usd,omitempty"`
+	TxTypes        []string `json:"tx_types,omitempty"`
+	Chains         []string `json:"chains,omitempty"`
+	NewTrades      *bool    `json:"new_trades,omitempty"`
+	TelegramBot    *string  `json:"telegram_bot,omitempty"`
+	DiscordChannel *string  `json:"discord_channel,omitempty"`
+}
+
+// TelegramBot represents a Telegram bot available for notifications.
+type TelegramBot struct {
+	ID       interface{} `json:"id"` // Can be string or int
+	Label    string      `json:"label"`
+	Name     string      `json:"name"`
+	Disabled bool        `json:"disabled"`
+	Plan     string      `json:"plan"`
+	Link     string      `json:"link"`
+	Default  bool        `json:"default"`
+	IsCustom bool        `json:"is_custom"`
+	Usage    string      `json:"usage"`
+}
+
+// GetTelegramBotsResponse is the response from the GetTelegramBots endpoint.
+type GetTelegramBotsResponse struct {
+	Bots []TelegramBot `json:"bots"`
+}
