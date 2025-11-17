@@ -16,6 +16,17 @@ import (
 // Cost: 5 credits per request (3 credits when filtered by wallet).
 // WARNING: Setting IncludeMarketCap to true doubles the cost (10 or 6 credits).
 //
+// Example:
+//
+//	// Get feed with new MaxUSD filter and market cap data
+//	maxUSD := 100000.0
+//	includeMarketCap := true
+//	feed, err := client.GetFeedV1(ctx, &apiv1.FeedRequest{
+//		ListID:           apiv1.ToRef(int64(123)),
+//		MaxUSD:           &maxUSD,
+//		IncludeMarketCap: &includeMarketCap, // WARNING: Doubles credit cost
+//	})
+//
 // https://developer.cielo.finance/reference/getfeed
 func (c *Client) GetFeedV1(ctx context.Context, req *apiv1.FeedRequest) (*apiv1.FeedResponse, error) {
 	resp := api.CieloResponse[apiv1.FeedResponse]{}
@@ -47,6 +58,14 @@ func (c *Client) GetNftsPnlV1(ctx context.Context, req *apiv1.NftsPnLRequest) (*
 // GetTokensPnlV1 retrieves token profit and loss data for a wallet.
 //
 // Cost: 5 credits per request
+//
+// Example:
+//
+//	// Get only active positions (balance > 0)
+//	pnl, err := client.GetTokensPnlV1(ctx, &apiv1.TokensPnLRequest{
+//		Wallet:              "0x1234...",
+//		ActivePositionsOnly: apiv1.ToRef(true),
+//	})
 //
 // https://developer.cielo.finance/reference/gettokenspnl
 func (c *Client) GetTokensPnlV1(ctx context.Context, req *apiv1.TokensPnLRequest) (*apiv1.TokensPnLResponse, error) {
@@ -384,6 +403,15 @@ func (c *Client) UpdateTrackedWalletV1(ctx context.Context, walletID int64, req 
 //
 // Cost: 5 credits per request
 //
+// Example:
+//
+//	// Update only notification settings (partial update)
+//	updated, err := client.UpdateTrackedWalletV2(ctx, "0x1234...", &apiv1.UpdateTrackedWalletV2Request{
+//		MinUSD:         apiv1.ToRef(1000.0),
+//		TelegramBot:    apiv1.ToRef("my_bot"),
+//		DiscordChannel: apiv1.ToRef("webhook_url"),
+//	})
+//
 // https://developer.cielo.finance/reference/updateTrackedWalletV2
 func (c *Client) UpdateTrackedWalletV2(ctx context.Context, wallet string, req *apiv1.UpdateTrackedWalletV2Request) (*apiv1.TrackedWallet, error) {
 	resp := api.CieloResponse[apiv1.TrackedWallet]{}
@@ -422,6 +450,17 @@ func (c *Client) GetTelegramBotsV1(ctx context.Context) (*apiv1.GetTelegramBotsR
 // Supported chains: Solana, EVM (Ethereum, Base, HyperEVM)
 // Cost: 20 credits per request
 //
+// Example:
+//
+//	portfolio, err := client.GetWalletPortfolioV1(ctx, "0x1234...")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Printf("Total USD: $%.2f\n", portfolio.TotalUSD)
+//	for _, token := range portfolio.Tokens {
+//		fmt.Printf("%s: %.2f (%s)\n", token.Symbol, token.Balance, token.TotalUSDValue)
+//	}
+//
 // https://developer.cielo.finance/reference/getWalletPortfolio
 func (c *Client) GetWalletPortfolioV1(ctx context.Context, wallet string) (*apiv1.WalletPortfolioResponse, error) {
 	resp := api.CieloResponse[apiv1.WalletPortfolioResponse]{}
@@ -452,6 +491,13 @@ func (c *Client) GetWalletPortfolioV1(ctx context.Context, wallet string) (*apiv
 //
 // Supported chains: Solana, EVM (Ethereum, Base, HyperEVM), Sui
 // Cost: 20 credits per wallet
+//
+// Example (aggregated multi-wallet portfolio):
+//
+//	portfolio, err := client.GetWalletPortfolioV2(ctx, &apiv1.WalletPortfolioV2Request{
+//		Wallets: []string{"0x1111...", "0x2222...", "0x3333..."},
+//	})
+//	// Cost: 60 credits (20 per wallet)
 //
 // https://developer.cielo.finance/reference/getWalletPortfolioV2
 func (c *Client) GetWalletPortfolioV2(ctx context.Context, req *apiv1.WalletPortfolioV2Request) (*apiv1.WalletPortfolioV2Response, error) {
@@ -548,6 +594,18 @@ func (c *Client) GetTokenBalanceV1(ctx context.Context, req *apiv1.TokenBalanceR
 // In that case, retry the request after 10 seconds.
 //
 // Cost: 30 credits per request
+//
+// Example:
+//
+//	stats, err := client.GetTradingStatsV1(ctx, &apiv1.TradingStatsRequest{
+//		Wallet: "0x1234...",
+//		Chain:  apiv1.ToRef(chains.Ethereum),
+//	})
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Printf("Total PnL: $%.2f | Win Rate: %.1f%%\n",
+//		stats.TotalPnL, stats.WinRate*100)
 //
 // https://developer.cielo.finance/reference/getTradingStats
 func (c *Client) GetTradingStatsV1(ctx context.Context, req *apiv1.TradingStatsRequest) (*apiv1.TradingStatsResponse, error) {
