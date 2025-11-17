@@ -8,13 +8,22 @@ import (
 	"github.com/sealtv/cielogo/api/chains"
 )
 
+// TokensPnLRequest is used to retrieve token profit and loss data for a wallet.
 type TokensPnLRequest struct {
-	Wallet              string
-	Chains              []chains.ChainType
-	Timeframe           *string
-	NextObject          *string
-	CexTransfers        *bool
-	Tokens              []string
+	// Wallet is the wallet address to get PnL data for (required).
+	Wallet string
+	// Chains filters PnL by specific blockchain chains.
+	Chains []chains.ChainType
+	// Timeframe specifies the time period for PnL calculation (e.g., "7d", "30d", "all").
+	Timeframe *string
+	// NextObject is the pagination cursor from the previous response.
+	NextObject *string
+	// CexTransfers includes centralized exchange transfers in PnL calculations when true.
+	CexTransfers *bool
+	// Tokens filters PnL by specific token addresses or symbols.
+	Tokens []string
+	// ActivePositionsOnly filters for positions with balance > 0 when true.
+	// Set to true to see only currently held tokens, false or nil to see all historical positions.
 	ActivePositionsOnly *bool
 }
 

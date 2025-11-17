@@ -11,12 +11,16 @@ Please note, CieloGo is an unofficial client library and is not endorsed or main
 
 ## Features
 
-- Get feed information with customizable queries.
-- Retrieve Non-Fungible Token (NFT) Profit and Loss (PnL) statistics for specific wallets.
-- Fetch token PnL data for given wallets.
-- Obtain aggregated token PnL stats.
-- List related wallets to a given wallet.
-- Access tags associated with a wallet.
+- **Transaction Feed** - Get wallet or list transaction feeds with advanced filtering (chain, token, value range, market cap)
+- **Portfolio Management** - Retrieve wallet portfolios with token balances and USD values (single or multi-wallet)
+- **Token Information** - Access token metadata, real-time prices, statistics, and balances
+- **PnL Analytics** - Analyze NFT and token profit/loss with aggregated statistics and performance metrics
+- **Trading Statistics** - Get detailed trading performance stats including PnL, ROI, win rates, and more
+- **Related Wallets** - Discover wallets with transaction relationships and customizable sorting
+- **Wallet Tracking** - Full CRUD operations for tracked wallets with notification support (Telegram/Discord)
+- **Wallet Tags** - Tag wallets for organization and filter by custom or system tags
+- **Wallet Lists** - Create and manage wallet lists with follow/unfollow functionality
+- **WebSocket Support** - Real-time wallet activity monitoring via WebSocket connections
 
 ## Installation
 
@@ -67,6 +71,104 @@ tokensPnl, err := client.GetTokensPnlV1(ctx, &tokensPnLReq)
 ```
 
 For more details on each request and response structure, refer to the [Cielo Finance API documentation](https://developer.cielo.finance).
+
+## Breaking Changes
+
+### v0.x.x → v1.0.0
+
+#### 1. RelatedWallets Sorting Type Rename (Typo Fix)
+
+**Breaking Change:** Type and constant names corrected from `RelatedWalletsSoring` to `RelatedWalletsSorting`.
+
+**Migration:**
+```go
+// Before:
+sortCriteria := apiv1.RelatedWalletsSoringInflowDesc
+
+// After:
+sortCriteria := apiv1.RelatedWalletsSortingInflowDesc
+```
+
+**All Constants Renamed:**
+- `RelatedWalletsSoringInflowAsc` → `RelatedWalletsSortingInflowAsc`
+- `RelatedWalletsSoringInflowDesc` → `RelatedWalletsSortingInflowDesc`
+- `RelatedWalletsSoringOutflowAsc` → `RelatedWalletsSortingOutflowAsc`
+- `RelatedWalletsSoringOutflowDesc` → `RelatedWalletsSortingOutflowDesc`
+- `RelatedWalletsSoringTransactionsAsc` → `RelatedWalletsSortingTransactionsAsc`
+- `RelatedWalletsSoringTransactionsDesc` → `RelatedWalletsSortingTransactionsDesc`
+
+**Automated Fix:**
+```bash
+find . -type f -name "*.go" -exec sed -i 's/RelatedWalletsSoring/RelatedWalletsSorting/g' {} +
+```
+
+#### 2. DeleteWalletsListV1 Signature Change
+
+**Breaking Change:** New required `deleteWallets` parameter controls cascade deletion.
+
+**Migration:**
+```go
+// Before:
+err := client.DeleteWalletsListV1(ctx, listID)
+
+// After (preserve wallets):
+err := client.DeleteWalletsListV1(ctx, listID, false)
+
+// Or (delete wallets too):
+err := client.DeleteWalletsListV1(ctx, listID, true)
+```
+
+**Default Behavior:** Pass `false` to maintain backward compatibility (delete list only, keep wallets).
+
+## API Credits
+
+All API endpoints consume credits from your Cielo Finance account. Below is a comprehensive cost table:
+
+| Endpoint | Cost (Credits) | Notes |
+|----------|----------------|-------|
+| **Feed & PnL** |
+| GetFeedV1 | 5 (3 with wallet filter) | **10/6 with IncludeMarketCap=true** ⚠️ |
+| GetNftsPnlV1 | 5 | |
+| GetTokensPnlV1 | 5 | |
+| GetAggregatedTokenPnLV1 | **20** | Expensive operation |
+| **Portfolio & Token Info** |
+| GetWalletPortfolioV1 | **20** | |
+| GetWalletPortfolioV2 | **20 per wallet** | |
+| GetTokenMetadataV1 | 1 | |
+| GetTokenPriceV1 | 1 | |
+| GetTokenStatsV1 | 3 | |
+| GetTokenBalanceV1 | 3 | |
+| **Trading Stats** |
+| GetTradingStatsV1 | **30** | Most expensive, may return 202 Accepted |
+| **Related Wallets** |
+| GetRelatedWalletsV1 | 10 | |
+| **Tags** |
+| GetWalletTagsV1 | 5 | Deprecated, use GetWalletsTagsV1 |
+| GetWalletsTagsV1 | 5 | Batch operation (up to 50 wallets) |
+| GetWalletsByTagV1 | 10 | |
+| **Lists** |
+| GetAllWalletsListsV1 | 5 | |
+| GetUserWalletsListsV1 | 5 | |
+| AddWalletsListV1 | 5 | |
+| UpdateWalletsListV1 | 5 | |
+| DeleteWalletsListV1 | 5 | |
+| ToggleFollowWalletsListV1 | 5 | |
+| **Tracked Wallets** |
+| GetTrackedWalletsV1 | 5 | |
+| AddTrackedWalletsV1 | 5 | |
+| RemoveTrackedWalletsV1 | 5 | |
+| GetWalletByAddressV1 | 5 | |
+| UpdateTrackedWalletV1 | 5 | By ID (full update) |
+| UpdateTrackedWalletV2 | 5 | By address (partial update) |
+| GetTelegramBotsV1 | 5 | |
+
+### Cost Optimization Tips
+
+1. **Use batch operations** - `GetWalletsTagsV1` supports up to 50 wallets for 5 credits (vs 5 credits per wallet)
+2. **Filter feeds by wallet** - Reduces cost from 5 to 3 credits
+3. **Avoid IncludeMarketCap** unless necessary - Doubles feed costs (5→10 or 3→6)
+4. **Cache expensive results** - Portfolio (20 credits) and Trading Stats (30 credits) change infrequently
+5. **Use V2 partial updates** - `UpdateTrackedWalletV2` allows updating specific fields without full replacement
 
 ## Contributing
 

@@ -11,6 +11,12 @@ import (
 	"github.com/sealtv/cielogo/api/apiv1"
 )
 
+// GetFeedV1 retrieves the transaction feed for a wallet or list.
+//
+// Cost: 5 credits per request (3 credits when filtered by wallet).
+// WARNING: Setting IncludeMarketCap to true doubles the cost (10 or 6 credits).
+//
+// https://developer.cielo.finance/reference/getfeed
 func (c *Client) GetFeedV1(ctx context.Context, req *apiv1.FeedRequest) (*apiv1.FeedResponse, error) {
 	resp := api.CieloResponse[apiv1.FeedResponse]{}
 
@@ -22,7 +28,10 @@ func (c *Client) GetFeedV1(ctx context.Context, req *apiv1.FeedRequest) (*apiv1.
 	return &resp.Data, nil
 }
 
-// GetNftsPnlV1 returns a list of nft pnl for a given wallet.
+// GetNftsPnlV1 retrieves NFT profit and loss data for a wallet.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/getnftspnl
 func (c *Client) GetNftsPnlV1(ctx context.Context, req *apiv1.NftsPnLRequest) (*apiv1.NftsPnLResponse, error) {
 	resp := api.CieloResponse[apiv1.NftsPnLResponse]{}
@@ -35,7 +44,10 @@ func (c *Client) GetNftsPnlV1(ctx context.Context, req *apiv1.NftsPnLRequest) (*
 	return &resp.Data, nil
 }
 
-// GetTokensPnlV1 returns a list of tokens pnl for a given wallet.
+// GetTokensPnlV1 retrieves token profit and loss data for a wallet.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/gettokenspnl
 func (c *Client) GetTokensPnlV1(ctx context.Context, req *apiv1.TokensPnLRequest) (*apiv1.TokensPnLResponse, error) {
 	resp := api.CieloResponse[apiv1.TokensPnLResponse]{}
@@ -48,7 +60,10 @@ func (c *Client) GetTokensPnlV1(ctx context.Context, req *apiv1.TokensPnLRequest
 	return &resp.Data, nil
 }
 
-// GetAggregatedTokenPnLV1 returns a list of aggregated token pnl for a given wallet.
+// GetAggregatedTokenPnLV1 retrieves aggregated token statistics and performance metrics for a wallet.
+//
+// Cost: 20 credits per request
+//
 // https://developer.cielo.finance/reference/gettotalstats
 func (c *Client) GetAggregatedTokenPnLV1(ctx context.Context, req *apiv1.AggregatedTokenPnLRequest) (*apiv1.AggregatedTokenPnLResponse, error) {
 	resp := api.CieloResponse[apiv1.AggregatedTokenPnLResponse]{}
@@ -61,7 +76,10 @@ func (c *Client) GetAggregatedTokenPnLV1(ctx context.Context, req *apiv1.Aggrega
 	return &resp.Data, nil
 }
 
-// GetRelatedWalletsV1 returns a list of related wallets for a given wallet.
+// GetRelatedWalletsV1 finds wallets that have transacted with the specified wallet.
+//
+// Cost: 10 credits per request
+//
 // https://developer.cielo.finance/reference/getrelatedwalletsl
 func (c *Client) GetRelatedWalletsV1(ctx context.Context, req *apiv1.RelatedWalletsRequest) (*apiv1.RelatedWalletsResponse, error) {
 	resp := api.CieloResponse[apiv1.RelatedWalletsResponse]{}
@@ -74,10 +92,12 @@ func (c *Client) GetRelatedWalletsV1(ctx context.Context, req *apiv1.RelatedWall
 	return &resp.Data, nil
 }
 
-// GetWalletTagsV1 returns a list of wallet tags for a given wallet.
+// GetWalletTagsV1 retrieves tags for a single wallet.
 //
 // Deprecated: This endpoint is deprecated by the Cielo Finance API.
 // Use GetWalletsTagsV1 instead, which supports batch operations for up to 50 wallets.
+//
+// Cost: 5 credits per request
 //
 // https://developer.cielo.finance/reference/getwallettags
 func (c *Client) GetWalletTagsV1(ctx context.Context, req *apiv1.GetWalletTagsRequest) (*apiv1.GetWalletTagsResponse, error) {
@@ -91,7 +111,10 @@ func (c *Client) GetWalletTagsV1(ctx context.Context, req *apiv1.GetWalletTagsRe
 	return &resp.Data, nil
 }
 
-// GetWalletsTagsV1 returns a list of wallet tags for a given list of wallets.
+// GetWalletsTagsV1 retrieves tags for multiple wallets in a single request (up to 50 wallets).
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/getwalletstags
 func (c *Client) GetWalletsTagsV1(ctx context.Context, req *apiv1.GetWalletsTagsRequest) ([]apiv1.WalletTags, error) {
 	resp := api.CieloResponse[[]apiv1.WalletTags]{}
@@ -110,7 +133,10 @@ func (c *Client) GetWalletsTagsV1(ctx context.Context, req *apiv1.GetWalletsTags
 	return resp.Data, nil
 }
 
-// GetWalletsByTagV1 returns a list of wallets for a given tag.
+// GetWalletsByTagV1 retrieves all wallets that have a specific tag.
+//
+// Cost: 10 credits per request
+//
 // https://developer.cielo.finance/reference/getwalletsbytag
 func (c *Client) GetWalletsByTagV1(ctx context.Context, req *apiv1.GetWalletsByTagRequest) (*apiv1.GetWalletsByTagResponse, error) {
 	resp := api.CieloResponse[apiv1.GetWalletsByTagResponse]{}
@@ -143,7 +169,10 @@ func (c *Client) GetWalletsByTagV1(ctx context.Context, req *apiv1.GetWalletsByT
 
 // Wallet Lists
 
-// GetAllWalletsListsV1 returns a list of all wallets.
+// GetAllWalletsListV1 retrieves all public wallet lists with optional filtering and sorting.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/getalllists
 func (c *Client) GetAllWalletsListV1(ctx context.Context, req *apiv1.GetAllWalletsListsRequest) (*apiv1.GetAllWalletsListsResponse, error) {
 	resp := api.CieloResponse[apiv1.GetAllWalletsListsResponse]{}
@@ -171,7 +200,10 @@ func (c *Client) GetAllWalletsListV1(ctx context.Context, req *apiv1.GetAllWalle
 	return &resp.Data, nil
 }
 
-// GetUserWalletsListsV1 returns a list of users wallets.
+// GetUserWalletsListsV1 retrieves all wallet lists owned by the authenticated user.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/getuserlists
 func (c *Client) GetUserWalletsListsV1(ctx context.Context) ([]apiv1.WalletList, error) {
 	resp := api.CieloResponse[[]apiv1.WalletList]{}
@@ -185,7 +217,10 @@ func (c *Client) GetUserWalletsListsV1(ctx context.Context) ([]apiv1.WalletList,
 	return resp.Data, nil
 }
 
-// AddWalletsListV1 adds a wallet to a list.
+// AddWalletsListV1 creates a new wallet list.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/adduserlist
 func (c *Client) AddWalletsListV1(ctx context.Context, req *apiv1.AddWalletsListRequest) (*apiv1.WalletList, error) {
 	const path = "/v1/lists"
@@ -199,7 +234,10 @@ func (c *Client) AddWalletsListV1(ctx context.Context, req *apiv1.AddWalletsList
 	return &resp.Data, nil
 }
 
-// UpdateWalletsListV1 updates a wallet list.
+// UpdateWalletsListV1 updates an existing wallet list's properties.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/updateuserlist
 func (c *Client) UpdateWalletsListV1(ctx context.Context, req *apiv1.UpdateWalletsListRequest) (*apiv1.WalletList, error) {
 	resp := api.CieloResponse[apiv1.WalletList]{}
@@ -215,6 +253,8 @@ func (c *Client) UpdateWalletsListV1(ctx context.Context, req *apiv1.UpdateWalle
 // DeleteWalletsListV1 deletes a wallet list.
 // If deleteWallets is true, all wallets in the list will also be deleted.
 // If deleteWallets is false, only the list itself is deleted, wallets are preserved.
+//
+// Cost: 5 credits per request
 //
 // https://developer.cielo.finance/reference/deleteuserlist
 func (c *Client) DeleteWalletsListV1(ctx context.Context, listID int64, deleteWallets bool) error {
@@ -232,7 +272,10 @@ func (c *Client) DeleteWalletsListV1(ctx context.Context, listID int64, deleteWa
 	return nil
 }
 
-// ToggleFollowWalletsListV1 toggles the follow status of a wallet list.
+// ToggleFollowWalletsListV1 toggles the follow status of a public wallet list.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/togglefollowlist
 func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*apiv1.ToggleFollowWalletsListResponce, error) {
 	resp := apiv1.ToggleFollowWalletsListResponce{}
@@ -246,7 +289,10 @@ func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*
 	return &resp, nil
 }
 
-// GetTrackedWalletsV1 returns a list of tracked wallets.
+// GetTrackedWalletsV1 retrieves all wallets being tracked by the user, with optional filtering by list.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/gettrackedwallets
 func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedWalletsRequest) (*apiv1.GetTrackedWalletsResponse, error) {
 	const path = "/v1/tracked-wallets"
@@ -269,7 +315,10 @@ func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedW
 	return &resp.Data, nil
 }
 
-// AddTrackedWalletsV1 adds a wallet to tracked wallets.
+// AddTrackedWalletsV1 adds a new wallet to tracking with optional notification settings.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/addtrackedwallet
 func (c *Client) AddTrackedWalletsV1(ctx context.Context, req *apiv1.AddTrackedWalletRequest) (*apiv1.TrackedWallet, error) {
 	const path = "/v1/tracked-wallets"
@@ -282,7 +331,10 @@ func (c *Client) AddTrackedWalletsV1(ctx context.Context, req *apiv1.AddTrackedW
 	return &resp.Data, nil
 }
 
-// RemoveTrackedWalletsV1 deletes a tracked wallet.
+// RemoveTrackedWalletsV1 removes one or more wallets from tracking by their IDs.
+//
+// Cost: 5 credits per request
+//
 // https://developer.cielo.finance/reference/removetrackedwallets
 func (c *Client) RemoveTrackedWalletsV1(ctx context.Context, req *apiv1.RemoveTrackedWalletsRequest) error {
 	const path = "/v1/tracked-wallets"
