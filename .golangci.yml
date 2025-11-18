@@ -215,10 +215,17 @@ linters:
           - errcheck
           - govet
         path: _test\.go
+      - linters:
+          - forbidigo
+          - funlen
+          - gosec
+          - gocognit
+          - cyclop
+          - goimports
+        path: examples/
     paths:
       - third_party$
       - builtin$
-      - examples$
 issues:
   max-same-issues: 50
 formatters:
