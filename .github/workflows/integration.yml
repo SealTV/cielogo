@@ -1,37 +1,34 @@
 name: Integration Tests
 
 on:
-  schedule:
-    - cron: '0 0 * * *'  # Run daily at midnight UTC
-  workflow_dispatch:      # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      credit_budget:
+        description: 'Explicit credit ceiling for the read-only release smoke (72-100)'
+        required: true
+        type: number
+        default: 72
 
 jobs:
   integration:
-    name: Integration Tests
+    name: Budgeted API release smoke
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.27.2'
           cache: true
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run integration tests
+      - name: Check API key
         env:
           CIELO_API_KEY: ${{ secrets.CIELO_API_KEY }}
-        run: go test -v -tags=integration ./...
-        continue-on-error: true
-
-      - name: Report status
-        if: failure()
         run: |
-          echo "⚠️ Integration tests failed. This may be due to:"
-          echo "  - Missing or invalid CIELO_API_KEY secret"
-          echo "  - API rate limiting"
-          echo "  - Temporary API issues"
+          if [ -z "$CIELO_API_KEY" ]; then
+            echo "CIELO_API_KEY secret is missing"
+            exit 1
+          fi
+      - name: Run read-only smoke with an explicit budget
+        env:
+          CIELO_API_KEY: ${{ secrets.CIELO_API_KEY }}
+          CIELO_LIVE_CREDIT_BUDGET: ${{ inputs.credit_budget }}
+        run: go test -v -tags=integration -run '^TestIntegrationReleaseSmoke$' -timeout=4m .

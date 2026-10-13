@@ -2,6 +2,7 @@ package apiv1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/sealtv/cielogo/api/chains"
@@ -14,7 +15,7 @@ const (
 	TxTypeLending     TxType = "lending"
 	TxTypeLP          TxType = "lp"
 	TxTypeNftLending  TxType = "nft_lending"
-	TxTypeNftMitnt    TxType = "nft_mint"
+	TxTypeNftMint     TxType = "nft_mint"
 	TxTypeNftTrade    TxType = "nft_trade"
 	TxTypeNftTransfer TxType = "nft_transfer"
 	TxTypeSwap        TxType = "swap"
@@ -35,7 +36,7 @@ const (
 
 // Additional event and virtual filter types supported by the API.
 const (
-	TxTypeNftMint           TxType = TxTypeNftMitnt
+	TxTypeNftMitnt          TxType = TxTypeNftMint
 	TxTypePerpOrder         TxType = "perp_order"
 	TxTypePerpTwap          TxType = "perp_twap"
 	TxTypePerpImminentLiq   TxType = "perp_imminent_liq"
@@ -74,6 +75,9 @@ func (t *TxEvent) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return fmt.Errorf("failed to unmarshal tx event: %w", err)
 	}
+	if decoded.TxType == "" {
+		return errors.New("tx event requires tx_type")
+	}
 	decoded.Data = createTransactionEventByType(decoded.TxType)
 	if decoded.Data == nil {
 		decoded.Data = &UnknownTransactionEvent{Type: decoded.TxType, Raw: append(json.RawMessage(nil), data...)}
@@ -95,7 +99,7 @@ func createTransactionEventByType(txType TxType) TransactionEvent {
 		return &LpEvent{}
 	case TxTypeNftLending:
 		return &NftLendingEvent{}
-	case TxTypeNftMitnt:
+	case TxTypeNftMint:
 		return &NftMintEvent{}
 	case TxTypeNftTrade:
 		return &NftTradeEvent{}
@@ -156,8 +160,9 @@ func (e *UnknownTransactionEvent) GetType() TxType { return e.Type }
 type LpType string
 
 const (
-	LpTypeAddLpType = "add"
-	LpTypeRemove    = "remove"
+	LpTypeAdd       LpType = "add"
+	LpTypeAddLpType        = LpTypeAdd
+	LpTypeRemove           = "remove"
 )
 
 // BridgeEvent is the API payload for TxTypeBridge.
@@ -181,11 +186,11 @@ type BridgeEvent struct {
 	TokenName      string           `json:"token_name"`
 	TokenSymbol    string           `json:"token_symbol"`
 	TokenIconLink  string           `json:"token_icon_link"`
-	Amoun          float64          `json:"amount"`
+	Amount         float64          `json:"amount"`
 	AmountUSD      float64          `json:"amount_usd"`
 	FromChain      string           `json:"from_chain"`
 	ToChain        string           `json:"to_chain"`
-	Platfrom       string           `json:"platform"`
+	Platform       string           `json:"platform"`
 	Price          float64          `json:"price"`
 	Type           string           `json:"type"`
 }
@@ -296,7 +301,7 @@ type NftLendingEvent struct {
 
 func (e *NftLendingEvent) GetType() TxType { return TxTypeNftLending }
 
-// NftMintEvent is the API payload for TxTypeNftMitnt.
+// NftMintEvent is the API payload for TxTypeNftMint.
 type NftMintEvent struct {
 	Wallet          string           `json:"wallet"`
 	WalletLabel     string           `json:"wallet_label,omitempty"`
@@ -328,7 +333,7 @@ type NftMintEvent struct {
 	ValueUsd        float64          `json:"value_usd"`
 }
 
-func (e *NftMintEvent) GetType() TxType { return TxTypeNftMitnt }
+func (e *NftMintEvent) GetType() TxType { return TxTypeNftMint }
 
 // NftTradeEvent is the API payload for TxTypeNftTrade.
 type NftTradeEvent struct {
@@ -993,3 +998,47 @@ type HyperliquidLedgerEvent struct {
 }
 
 func (e *HyperliquidLedgerEvent) GetType() TxType { return TxTypeHyperliquidLedger }
+
+// MarshalJSON flattens the typed transaction payload into the same shape as the
+// API feed. The outer event header takes precedence over duplicated payload fields.
+func (t TxEvent) MarshalJSON() ([]byte, error) {
+	type header TxEvent
+	if t.TxType == "" && t.Data != nil {
+		t.TxType = t.Data.GetType()
+	}
+	if t.TxType == "" {
+		return nil, errors.New("tx event requires tx_type")
+	}
+	var payload map[string]json.RawMessage
+	if t.Data != nil {
+		encoded, err := json.Marshal(t.Data)
+		if err != nil {
+			return nil, fmt.Errorf("encode transaction payload: %w", err)
+		}
+		if err := json.Unmarshal(encoded, &payload); err != nil {
+			return nil, fmt.Errorf("decode transaction payload: %w", err)
+		}
+	}
+	if payload == nil {
+		payload = make(map[string]json.RawMessage)
+	}
+	encoded, err := json.Marshal(header(t))
+	if err != nil {
+		return nil, fmt.Errorf("encode event header: %w", err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &fields); err != nil {
+		return nil, fmt.Errorf("decode event header: %w", err)
+	}
+	for key, value := range fields {
+		payload[key] = value
+	}
+	return json.Marshal(payload)
+}
+
+func (e UnknownTransactionEvent) MarshalJSON() ([]byte, error) {
+	if !json.Valid(e.Raw) {
+		return nil, errors.New("unknown event contains invalid JSON")
+	}
+	return e.Raw, nil
+}

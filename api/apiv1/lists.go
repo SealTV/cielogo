@@ -36,7 +36,7 @@ type UpdateWalletsListRequest struct {
 	Description    string  `json:"description,omitempty"`
 }
 
-type ToggleFollowWalletsListResponce struct {
+type ToggleFollowWalletsListResponse struct {
 	Followed bool `json:"followed"`
 }
 
@@ -54,3 +54,8 @@ type WalletList struct {
 	Followed      bool   `json:"followed"`
 	IsCreator     bool   `json:"is_creator"`
 }
+
+// ToggleFollowWalletsListResponce is retained for source compatibility.
+//
+// Deprecated: use ToggleFollowWalletsListResponse.
+type ToggleFollowWalletsListResponce = ToggleFollowWalletsListResponse

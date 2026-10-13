@@ -1,0 +1,240 @@
+package contract_test
+
+import (
+	"context"
+	"math/big"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sealtv/cielogo"
+	sdkapi "github.com/sealtv/cielogo/api"
+	sdk "github.com/sealtv/cielogo/api/apiv1"
+	"github.com/sealtv/cielogo/api/chains"
+	"github.com/stretchr/testify/require"
+	domain "github.com/uniwhales/cielo-api-microservice/dbms/domain"
+	"github.com/uniwhales/cielo-api-microservice/pkg/cielopricer"
+	"github.com/uniwhales/cielo-api-microservice/pkg/types"
+	tags "github.com/uniwhales/cielo-api-microservice/pkg/types/tags"
+	api "github.com/uniwhales/cielo-api-microservice/router/handlers/api"
+	"github.com/uniwhales/cielo-api-microservice/router/handlers/api/models"
+	"github.com/uniwhales/cielo-api-microservice/router/middleware"
+)
+
+const wallet = "0x1234567890123456789012345678901234567890"
+
+type chainRepo struct{}
+
+func (chainRepo) GetChainsList(context.Context) ([]string, error) {
+	return []string{"ethereum", "solana"}, nil
+}
+func (chainRepo) GetChains(context.Context) ([]domain.Chain, error) {
+	return []domain.Chain{{Name: "ethereum", Type: "evm"}, {Name: "solana", Type: "solana"}}, nil
+}
+
+type userRepo struct{}
+
+func (userRepo) GetUserWalletById(context.Context, int64) (string, error) { return wallet, nil }
+
+type backend struct {
+	api.WalletManagementBackend
+	t *testing.T
+}
+
+func (b backend) GetTrackedWalletsRequest(_ context.Context, r models.GetTrackedWalletsRequest) (*models.GetTrackedWalletsResponse, error) {
+	require.Equal(b.t, 2, r.NextObject)
+	require.NotNil(b.t, r.ListID)
+	require.Equal(b.t, 17, *r.ListID)
+	return &models.GetTrackedWalletsResponse{Wallets: []models.WalletResponse{{ID: 17, Wallet: wallet}}, Paging: models.GetTrackedWalletsPaging{NextObject: 3, HasNextPage: true}}, nil
+}
+func (b backend) GetWalletByAddress(context.Context, int64, string) (*models.WalletResponse, error) {
+	return &models.WalletResponse{ID: 17, Wallet: wallet}, nil
+}
+func (b backend) UpdateTrackedWalletByAddress(_ context.Context, _ int64, r models.UpdateTrackedWalletV2Request) (*models.WalletResponse, error) {
+	require.Equal(b.t, []int{1, 2}, r.Filters)
+	require.Equal(b.t, []int{1}, r.Chains)
+	require.NotNil(b.t, r.MinAmountUSD)
+	require.Equal(b.t, 100.0, *r.MinAmountUSD)
+	require.NotNil(b.t, r.NewTrades)
+	require.False(b.t, *r.NewTrades)
+	return &models.WalletResponse{ID: 17, Wallet: r.Wallet}, nil
+}
+func (b backend) AddList(_ context.Context, _ int64, r models.CreateListParams) (*models.WalletsLists, error) {
+	require.Equal(b.t, []int{17, 18}, r.Wallets)
+	return &models.WalletsLists{ID: 17, Name: r.Name}, nil
+}
+func (b backend) ToggleFollowList(context.Context, int64, int) (*models.WalletsLists, error) {
+	return &models.WalletsLists{ID: 17, Followed: true}, nil
+}
+func (b backend) GetLists(_ context.Context, r models.ListsRequest) (*models.ListsPage, error) {
+	require.True(b.t, r.FollowingOnly)
+	return &models.ListsPage{Lists: []models.WalletsLists{{ID: 17}}}, nil
+}
+
+type pnlService struct {
+	api.PnLService
+	t *testing.T
+}
+
+func (p pnlService) GetTokensPnL(_ context.Context, r models.TokensPnLRequest) (models.TokensPnLData, error) {
+	require.Equal(p.t, []string{"solana"}, r.Chains)
+	return models.TokensPnLData{Items: []models.TokensPnLItem{{TotalPnLUsd: 123}}}, nil
+}
+func (p pnlService) GetNftsPnL(context.Context, models.NftPnLRequest) (models.NftsPnLData, error) {
+	return models.NftsPnLData{Items: []models.NftPnL{{NftName: "NFT", NftSymbol: "N", ProfitLoss: 123, TotalBuyAvg: 2}}}, nil
+}
+
+type tradingService struct{}
+
+func (tradingService) GetTradingStats(context.Context, types.TradingStatsRequest) (types.TradingStats, error) {
+	return types.TradingStats{PNL: 123, WinRate: 0.8, SwapsCount: 17}, nil
+}
+
+type feedService struct{ t *testing.T }
+
+func (f feedService) GetFeed(_ context.Context, r models.FeedRequest) (models.FeedData, error) {
+	require.Equal(f.t, []types.EventType{types.SwapEventType}, r.TxTypes)
+	return models.FeedData{Items: []models.FeedItem{&models.Swap{BaseFeedItem: models.BaseFeedItem{TxType: types.SwapEventType}, Token0Address: "SOL", Token0Amount: 2, Token1Address: "USDC", Token1Amount: 300}}}, nil
+}
+
+type tokenService struct{ api.TokenService }
+
+func (tokenService) GetTokenMetadata(context.Context, cielopricer.GetTokenMetadataRequest) (*cielopricer.TokenMetadata, error) {
+	return &cielopricer.TokenMetadata{Address: wallet, Chain: "ethereum", Name: "Token", Symbol: "TOK", Decimals: 18, TotalSupply: new(big.Int).SetUint64(^uint64(0))}, nil
+}
+
+type portfolioService struct{ api.PortfolioService }
+
+func (portfolioService) GetWalletPortfolio(context.Context, string, bool, bool) (*types.Portfolio, error) {
+	return &types.Portfolio{Tokens: []types.PortfolioToken{{Chain: "ethereum", TokenAddress: wallet, TotalUsdValue: 123}}}, nil
+}
+func (portfolioService) GetSingleTokenPortfolio(context.Context, string, string) (*types.PortfolioToken, error) {
+	return &types.PortfolioToken{Chain: "solana", TokenAddress: "So11111111111111111111111111111111111111112", Balance: 2, TotalUsdValue: 300}, nil
+}
+
+type tagService struct{ api.TagsPublicApiService }
+
+func (tagService) GetWalletsTags(context.Context, []string) (map[string][]tags.Tag, error) {
+	return map[string][]tags.Tag{wallet: {{}}}, nil
+}
+
+// This boundary is a known server limitation: the handler currently rejects
+// the 50th wallet before returning a success body. The SDK must surface the 400.
+func TestCurrentServerWalletTagBoundary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/v1/tags", api.NewTagsAPIHandler(tagService{}).GetWalletsTags)
+	s := httptest.NewServer(r)
+	defer s.Close()
+	c := cielogo.NewClient("offline-key", cielogo.WithBaseURL(s.URL))
+	for _, count := range []int{49, 50} {
+		wallets := make([]string, count)
+		for i := range wallets {
+			wallets[i] = wallet
+		}
+		_, err := c.GetWalletsTagsV1(context.Background(), &sdk.GetWalletsTagsRequest{Wallets: wallets})
+		if count == 49 {
+			require.NoError(t, err)
+		} else {
+			var apiErr *sdkapi.Error
+			require.ErrorAs(t, err, &apiErr)
+			require.Equal(t, 400, apiErr.StatusCode)
+		}
+	}
+}
+
+func TestSDKAgainstActualHandlers(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		ctx := middleware.ContextWithTgHandleId(c.Request.Context(), 17)
+		ctx = middleware.ContextWithPlan(ctx, types.PlanApiBuilder)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	})
+	w := api.NewWalletManagementHandler(userRepo{}, backend{t: t})
+	r.GET("/v1/tracked-wallets/", w.GetTrackedWallets)
+	r.PUT("/v2/tracked-wallets/:wallet", w.UpdateTrackedWalletV2)
+	r.POST("/v1/lists/", w.AddList)
+	r.GET("/v1/lists/all", w.GetAllLists)
+	r.PUT("/v1/lists/:list_id/toggle-follow", w.ToggleFollowList)
+	p := api.NewPnLAPIHandler(pnlService{t: t}, tokenService{}, chainRepo{}, false)
+	r.GET("/v1/:wallet/pnl/tokens", p.GetTokensPnL)
+	r.GET("/v1/:wallet/pnl/nfts", p.GetNftsPnL)
+	r.GET("/v1/:wallet/trading-stats", api.NewTradingStatsHandler(tradingService{}).GetTradingStats)
+	r.GET("/v1/feed", api.NewFeedAPIHandler(feedService{t: t}, chainRepo{}).GetFeed)
+	r.GET("/v1/token/metadata", api.NewTokenApiHandler(tokenService{}).GetTokenMetadata)
+	r.GET("/v2/portfolio", api.NewPortfolioAPIHandler(portfolioService{}).GetPortfolioV2)
+	server := httptest.NewServer(r)
+	defer server.Close()
+	c := cielogo.NewClient("offline-key", cielogo.WithBaseURL(server.URL), cielogo.WithPortfolioBaseURL(server.URL))
+	ctx := context.Background()
+	t.Run("tracked query", func(t *testing.T) {
+		resp, err := c.GetTrackedWalletsV1(ctx, &sdk.GetTrackedWalletsRequest{NextObject: sdk.ToRef("2"), ListID: sdk.ToRef(int64(17))})
+		require.NoError(t, err)
+		require.Equal(t, 3, resp.Pagination.NextObject)
+	})
+	t.Run("V2 settings", func(t *testing.T) {
+		resp, err := c.UpdateTrackedWalletV2(ctx, wallet, &sdk.UpdateTrackedWalletV2Request{Filters: []int{1, 2}, Chains: []int{1}, MinAmountUSD: sdk.ToRef(100.0), NewTrades: sdk.ToRef(false)})
+		require.NoError(t, err)
+		require.Equal(t, int64(17), resp.ID)
+	})
+	t.Run("list IDs", func(t *testing.T) {
+		resp, err := c.AddWalletsListV1(ctx, &sdk.AddWalletsListRequest{Name: "list", Wallets: []int64{17, 18}})
+		require.NoError(t, err)
+		require.Equal(t, int64(17), resp.ID)
+	})
+	t.Run("list filter", func(t *testing.T) {
+		resp, err := c.GetAllWalletsListV1(ctx, &sdk.GetAllWalletsListsRequest{FollowOnly: true})
+		require.NoError(t, err)
+		require.Len(t, resp.List, 1)
+	})
+	t.Run("toggle envelope", func(t *testing.T) {
+		resp, err := c.ToggleFollowWalletsListV1(ctx, 17)
+		require.NoError(t, err)
+		require.True(t, resp.Followed)
+	})
+	t.Run("token chain", func(t *testing.T) {
+		resp, err := c.GetTokensPnlV1(ctx, &sdk.TokensPnLRequest{Wallet: wallet, Chains: []chains.ChainType{chains.Solana}})
+		require.NoError(t, err)
+		require.Equal(t, 123.0, resp.Items[0].TotalPnlUSD)
+	})
+	t.Run("NFT fields", func(t *testing.T) {
+		resp, err := c.GetNftsPnlV1(ctx, &sdk.NftsPnLRequest{Wallet: wallet})
+		require.NoError(t, err)
+		require.Equal(t, "NFT", resp.Items[0].Name)
+		require.Equal(t, 123.0, resp.Items[0].ProfitLoss)
+	})
+	t.Run("trading fields", func(t *testing.T) {
+		resp, err := c.GetTradingStatsV1(ctx, &sdk.TradingStatsRequest{Wallet: wallet})
+		require.NoError(t, err)
+		require.Equal(t, 123.0, resp.PnL)
+		require.Equal(t, 0.8, resp.WinRate)
+	})
+	t.Run("feed filter and swap", func(t *testing.T) {
+		resp, err := c.GetFeedV1(ctx, &sdk.FeedRequest{Wallet: wallet, TxTypes: []sdk.TxType{sdk.TxTypeSwap}})
+		require.NoError(t, err)
+		swap, ok := resp.Items[0].Data.(*sdk.SwapEvent)
+		require.True(t, ok)
+		require.Equal(t, "SOL", swap.Token0Address)
+		require.Equal(t, 2.0, swap.Token0Amount)
+	})
+	t.Run("unsigned metadata", func(t *testing.T) {
+		resp, err := c.GetTokenMetadataV1(ctx, &sdk.TokenMetadataRequest{Chain: sdk.TokenChainEthereum, TokenAddress: wallet})
+		require.NoError(t, err)
+		require.Equal(t, "Token", resp.Name)
+		require.Equal(t, ^uint64(0), resp.Supply)
+		require.Equal(t, "18.45", resp.TotalSupplyString)
+	})
+	t.Run("private portfolio", func(t *testing.T) {
+		resp, err := c.GetWalletPortfolioV2(ctx, &sdk.WalletPortfolioV2Request{Wallets: []string{wallet}})
+		require.NoError(t, err)
+		require.Equal(t, 123.0, resp.TotalUSDValue)
+	})
+	t.Run("single token", func(t *testing.T) {
+		resp, err := c.GetWalletPortfolioV2(ctx, &sdk.WalletPortfolioV2Request{Wallets: []string{"So11111111111111111111111111111111111111112"}, Token: sdk.ToRef("So11111111111111111111111111111111111111112")})
+		require.NoError(t, err)
+		require.NotNil(t, resp.SingleToken)
+		require.Equal(t, 300.0, resp.SingleToken.TotalUSDValue)
+	})
+}

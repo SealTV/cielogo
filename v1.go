@@ -31,6 +31,9 @@ import (
 //
 // https://developer.cielo.finance/reference/getfeed
 func (c *Client) GetFeedV1(ctx context.Context, req *apiv1.FeedRequest) (*apiv1.FeedResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.FeedResponse]{}
 
 	path := fmt.Sprintf("/v1/feed?%s", req.GetQueryString())
@@ -47,9 +50,12 @@ func (c *Client) GetFeedV1(ctx context.Context, req *apiv1.FeedRequest) (*apiv1.
 //
 // https://developer.cielo.finance/reference/getnftspnl
 func (c *Client) GetNftsPnlV1(ctx context.Context, req *apiv1.NftsPnLRequest) (*apiv1.NftsPnLResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.NftsPnLResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/pnl/nfts?%s", req.Wallet, req.GetQueryString())
+	path := fmt.Sprintf("/v1/%s/pnl/nfts?%s", url.PathEscape(req.Wallet), req.GetQueryString())
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get  pnl: %w", err)
 	}
@@ -71,9 +77,12 @@ func (c *Client) GetNftsPnlV1(ctx context.Context, req *apiv1.NftsPnLRequest) (*
 //
 // https://developer.cielo.finance/reference/gettokenspnl
 func (c *Client) GetTokensPnlV1(ctx context.Context, req *apiv1.TokensPnLRequest) (*apiv1.TokensPnLResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TokensPnLResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/pnl/tokens?%s", req.Wallet, req.GetQueryString())
+	path := fmt.Sprintf("/v1/%s/pnl/tokens?%s", url.PathEscape(req.Wallet), req.GetQueryString())
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get tokens pnl: %w", err)
 	}
@@ -87,9 +96,12 @@ func (c *Client) GetTokensPnlV1(ctx context.Context, req *apiv1.TokensPnLRequest
 //
 // https://developer.cielo.finance/reference/gettotalstats
 func (c *Client) GetAggregatedTokenPnLV1(ctx context.Context, req *apiv1.AggregatedTokenPnLRequest) (*apiv1.AggregatedTokenPnLResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.AggregatedTokenPnLResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/pnl/total-stats?%s", req.Wallet, req.GetQueryString())
+	path := fmt.Sprintf("/v1/%s/pnl/total-stats?%s", url.PathEscape(req.Wallet), req.GetQueryString())
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get tokens pnl: %w", err)
 	}
@@ -103,9 +115,12 @@ func (c *Client) GetAggregatedTokenPnLV1(ctx context.Context, req *apiv1.Aggrega
 //
 // https://developer.cielo.finance/reference/getrelatedwalletsl
 func (c *Client) GetRelatedWalletsV1(ctx context.Context, req *apiv1.RelatedWalletsRequest) (*apiv1.RelatedWalletsResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.RelatedWalletsResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/related-wallets?%s", req.Wallet, req.GetQueryString())
+	path := fmt.Sprintf("/v1/%s/related-wallets?%s", url.PathEscape(req.Wallet), req.GetQueryString())
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get tokens pnl: %w", err)
 	}
@@ -122,9 +137,12 @@ func (c *Client) GetRelatedWalletsV1(ctx context.Context, req *apiv1.RelatedWall
 //
 // https://developer.cielo.finance/reference/getwallettags
 func (c *Client) GetWalletTagsV1(ctx context.Context, req *apiv1.GetWalletTagsRequest) (*apiv1.GetWalletTagsResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.GetWalletTagsResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/tags", req.Wallet)
+	path := fmt.Sprintf("/v1/%s/tags", url.PathEscape(req.Wallet))
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get wallet tags: %w", err)
 	}
@@ -132,12 +150,15 @@ func (c *Client) GetWalletTagsV1(ctx context.Context, req *apiv1.GetWalletTagsRe
 	return &resp.Data, nil
 }
 
-// GetWalletsTagsV1 retrieves tags for multiple wallets in a single request (up to 50 wallets).
+// GetWalletsTagsV1 retrieves tags for multiple wallets in a single request (use at most 49 wallets until the server boundary is fixed).
 //
 // Cost: 5 credits per request
 //
 // https://developer.cielo.finance/reference/getwalletstags
 func (c *Client) GetWalletsTagsV1(ctx context.Context, req *apiv1.GetWalletsTagsRequest) ([]apiv1.WalletTags, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[[]apiv1.WalletTags]{}
 
 	values := url.Values{}
@@ -160,6 +181,9 @@ func (c *Client) GetWalletsTagsV1(ctx context.Context, req *apiv1.GetWalletsTags
 //
 // https://developer.cielo.finance/reference/getwalletsbytag
 func (c *Client) GetWalletsByTagV1(ctx context.Context, req *apiv1.GetWalletsByTagRequest) (*apiv1.GetWalletsByTagResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.GetWalletsByTagResponse]{}
 
 	values := url.Values{}
@@ -196,6 +220,9 @@ func (c *Client) GetWalletsByTagV1(ctx context.Context, req *apiv1.GetWalletsByT
 //
 // https://developer.cielo.finance/reference/getalllists
 func (c *Client) GetAllWalletsListV1(ctx context.Context, req *apiv1.GetAllWalletsListsRequest) (*apiv1.GetAllWalletsListsResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.GetAllWalletsListsResponse]{}
 
 	values := url.Values{}
@@ -244,6 +271,9 @@ func (c *Client) GetUserWalletsListsV1(ctx context.Context) ([]apiv1.WalletList,
 //
 // https://developer.cielo.finance/reference/adduserlist
 func (c *Client) AddWalletsListV1(ctx context.Context, req *apiv1.AddWalletsListRequest) (*apiv1.WalletList, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	const path = "/v1/lists/"
 
 	resp := api.CieloResponse[apiv1.WalletList]{}
@@ -261,6 +291,9 @@ func (c *Client) AddWalletsListV1(ctx context.Context, req *apiv1.AddWalletsList
 //
 // https://developer.cielo.finance/reference/updateuserlist
 func (c *Client) UpdateWalletsListV1(ctx context.Context, req *apiv1.UpdateWalletsListRequest) (*apiv1.WalletList, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.WalletList]{}
 	path := fmt.Sprintf("/v1/lists/%d", req.ListID)
 
@@ -298,7 +331,7 @@ func (c *Client) DeleteWalletsListV1(ctx context.Context, listID int64, deleteWa
 // Cost: 5 credits per request
 //
 // https://developer.cielo.finance/reference/togglefollowlist
-func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*apiv1.ToggleFollowWalletsListResponce, error) {
+func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*apiv1.ToggleFollowWalletsListResponse, error) {
 	resp := api.CieloResponse[apiv1.WalletList]{}
 
 	path := fmt.Sprintf("/v1/lists/%d/toggle-follow", listID)
@@ -307,7 +340,7 @@ func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*
 		return nil, fmt.Errorf("failed to toggle follow wallet list: %w", err)
 	}
 
-	return &apiv1.ToggleFollowWalletsListResponce{Followed: resp.Data.Followed}, nil
+	return &apiv1.ToggleFollowWalletsListResponse{Followed: resp.Data.Followed}, nil
 }
 
 // GetTrackedWalletsV1 retrieves all wallets being tracked by the user, with optional filtering by list.
@@ -316,6 +349,9 @@ func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*
 //
 // https://developer.cielo.finance/reference/gettrackedwallets
 func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedWalletsRequest) (*apiv1.GetTrackedWalletsResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	path := "/v1/tracked-wallets/"
 
 	values := url.Values{}
@@ -346,6 +382,9 @@ func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedW
 //
 // https://developer.cielo.finance/reference/addtrackedwallet
 func (c *Client) AddTrackedWalletsV1(ctx context.Context, req *apiv1.AddTrackedWalletRequest) (*apiv1.TrackedWallet, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	const path = "/v1/tracked-wallets/"
 
 	resp := api.CieloResponse[apiv1.TrackedWallet]{}
@@ -362,6 +401,9 @@ func (c *Client) AddTrackedWalletsV1(ctx context.Context, req *apiv1.AddTrackedW
 //
 // https://developer.cielo.finance/reference/removetrackedwallets
 func (c *Client) RemoveTrackedWalletsV1(ctx context.Context, req *apiv1.RemoveTrackedWalletsRequest) error {
+	if req == nil {
+		return ErrNilRequest
+	}
 	const path = "/v1/tracked-wallets/"
 
 	if err := c.makeRequest(ctx, http.MethodDelete, path, req, nil); err != nil {
@@ -380,7 +422,7 @@ func (c *Client) RemoveTrackedWalletsV1(ctx context.Context, req *apiv1.RemoveTr
 func (c *Client) GetWalletByAddressV1(ctx context.Context, wallet string) (*apiv1.TrackedWallet, error) {
 	resp := api.CieloResponse[apiv1.TrackedWallet]{}
 
-	path := fmt.Sprintf("/v1/tracked-wallets/address/%s", wallet)
+	path := fmt.Sprintf("/v1/tracked-wallets/address/%s", url.PathEscape(wallet))
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get wallet by address: %w", err)
 	}
@@ -394,6 +436,9 @@ func (c *Client) GetWalletByAddressV1(ctx context.Context, wallet string) (*apiv
 //
 // https://developer.cielo.finance/reference/updateTrackedWalletV1
 func (c *Client) UpdateTrackedWalletV1(ctx context.Context, walletID int64, req *apiv1.UpdateTrackedWalletRequest) (*apiv1.TrackedWallet, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TrackedWallet]{}
 
 	path := fmt.Sprintf("/v1/tracked-wallets/%d", walletID)
@@ -420,9 +465,12 @@ func (c *Client) UpdateTrackedWalletV1(ctx context.Context, walletID int64, req 
 //
 // https://developer.cielo.finance/reference/updateTrackedWalletV2
 func (c *Client) UpdateTrackedWalletV2(ctx context.Context, wallet string, req *apiv1.UpdateTrackedWalletV2Request) (*apiv1.TrackedWallet, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TrackedWallet]{}
 
-	path := fmt.Sprintf("/v2/tracked-wallets/%s", wallet)
+	path := fmt.Sprintf("/v2/tracked-wallets/%s", url.PathEscape(wallet))
 	if err := c.makeRequest(ctx, http.MethodPut, path, req, &resp); err != nil {
 		return nil, fmt.Errorf("failed to update tracked wallet v2: %w", err)
 	}
@@ -471,7 +519,7 @@ func (c *Client) GetTelegramBotsV1(ctx context.Context) (*apiv1.GetTelegramBotsR
 func (c *Client) GetWalletPortfolioV1(ctx context.Context, wallet string) (*apiv1.WalletPortfolioResponse, error) {
 	resp := api.CieloResponse[apiv1.WalletPortfolioResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/portfolio", wallet)
+	path := fmt.Sprintf("/v1/%s/portfolio", url.PathEscape(wallet))
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get wallet portfolio: %w", err)
 	}
@@ -507,6 +555,12 @@ func (c *Client) GetWalletPortfolioV1(ctx context.Context, wallet string) (*apiv
 //
 // https://developer.cielo.finance/reference/getWalletPortfolioV2
 func (c *Client) GetWalletPortfolioV2(ctx context.Context, req *apiv1.WalletPortfolioV2Request) (*apiv1.WalletPortfolioV2Response, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
+	if c == nil || c.cli == nil {
+		return nil, ErrInvalidClient
+	}
 	if c.portfolioBaseURL == "" {
 		return nil, errors.New("portfolio V2 requires WithPortfolioBaseURL: endpoint is private")
 	}
@@ -530,6 +584,9 @@ func (c *Client) GetWalletPortfolioV2(ctx context.Context, req *apiv1.WalletPort
 //
 // https://developer.cielo.finance/reference/getTokenMetadata
 func (c *Client) GetTokenMetadataV1(ctx context.Context, req *apiv1.TokenMetadataRequest) (*apiv1.TokenMetadataResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TokenMetadataResponse]{}
 
 	path := fmt.Sprintf("/v1/token/metadata?%s", req.GetQueryString())
@@ -547,6 +604,9 @@ func (c *Client) GetTokenMetadataV1(ctx context.Context, req *apiv1.TokenMetadat
 //
 // https://developer.cielo.finance/reference/getTokenPrice
 func (c *Client) GetTokenPriceV1(ctx context.Context, req *apiv1.TokenPriceRequest) (*apiv1.TokenPriceResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TokenPriceResponse]{}
 
 	path := fmt.Sprintf("/v1/token/price?%s", req.GetQueryString())
@@ -566,6 +626,9 @@ func (c *Client) GetTokenPriceV1(ctx context.Context, req *apiv1.TokenPriceReque
 //
 // https://developer.cielo.finance/reference/getTokenStats
 func (c *Client) GetTokenStatsV1(ctx context.Context, req *apiv1.TokenStatsRequest) (*apiv1.TokenStatsResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TokenStatsResponse]{}
 
 	path := fmt.Sprintf("/v1/token/stats?%s", req.GetQueryString())
@@ -584,9 +647,12 @@ func (c *Client) GetTokenStatsV1(ctx context.Context, req *apiv1.TokenStatsReque
 //
 // https://developer.cielo.finance/reference/getTokenBalance
 func (c *Client) GetTokenBalanceV1(ctx context.Context, req *apiv1.TokenBalanceRequest) (*apiv1.TokenBalanceResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TokenBalanceResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/token-balance?%s", req.Wallet, req.GetQueryString())
+	path := fmt.Sprintf("/v1/%s/token-balance?%s", url.PathEscape(req.Wallet), req.GetQueryString())
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get token balance: %w", err)
 	}
@@ -618,9 +684,12 @@ func (c *Client) GetTokenBalanceV1(ctx context.Context, req *apiv1.TokenBalanceR
 //
 // https://developer.cielo.finance/reference/getTradingStats
 func (c *Client) GetTradingStatsV1(ctx context.Context, req *apiv1.TradingStatsRequest) (*apiv1.TradingStatsResponse, error) {
+	if req == nil {
+		return nil, ErrNilRequest
+	}
 	resp := api.CieloResponse[apiv1.TradingStatsResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/trading-stats", req.Wallet)
+	path := fmt.Sprintf("/v1/%s/trading-stats", url.PathEscape(req.Wallet))
 	queryString := req.GetQueryString()
 	if queryString != "" {
 		path = fmt.Sprintf("%s?%s", path, queryString)

@@ -1,3 +1,20 @@
+# Migrating to the 1.0 release candidate
+
+The candidate retains the corrected v0.3.0 request/response shapes and adds stricter failure handling. Read [API_STABILITY.md](API_STABILITY.md) for the planned 1.x compatibility contract.
+
+Changes from v0.3.0:
+
+- `BridgeEvent.Amoun` becomes `Amount`; `Platfrom` becomes `Platform`. These are the remaining pre-1.0 field corrections.
+- Use canonical `ToggleFollowWalletsListResponse`, `TxTypeNftMint` and `LpTypeAdd`. Old type/constant spellings remain aliases for compatibility.
+- Malformed/concatenated JSON, missing success status and missing object data now produce `ErrInvalidResponse`, rather than returning empty data. Null lists still decode as empty collections. An application error with HTTP 200 is surfaced as `*api.Error`.
+- Default HTTP timeout is 90 seconds and maximum response size is 16 MiB. Use `WithHTTPClient` / `WithMaxResponseBytes` to change them.
+- Cross-origin redirects return `ErrUnsafeRedirect`. A custom redirect policy is still honored within the same origin.
+- Nil requests and contexts return sentinel errors. Nil client options and `WithHTTPClient(nil)` are ignored.
+- `TxEvent` now preserves its flattened payload when marshaled; events without a type are rejected. Reused WebSocket models remain unchanged after a failed decode.
+- A second concurrent listener returns `ErrListenerRunning`. Use `WithWebSocketDialer` for TLS/proxy/handshake settings; WebSocket handshake errors retain status and Retry-After.
+- `CloseIdleConnections` releases pooled HTTP connections.
+- Live integration tests now require a manual budgeted run. `CIELO_LIVE_CREDIT_BUDGET` must be 72-100 for `TestIntegrationReleaseSmoke`; no automatic paid retry occurs.
+
 # Migrating from v0.2.0 to v0.3.0
 
 v0.3.0 corrects the existing SDK contract against the API implementation. It changes some public Go types and decoded values. Update consumers before upgrading.
