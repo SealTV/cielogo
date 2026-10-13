@@ -25,3 +25,6 @@ cmd*
 # AI-assisted development documentation (internal use only)
 CLAUDE.md
 .docs/
+
+# macOS metadata
+.DS_Store

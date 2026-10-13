@@ -1,5 +1,7 @@
 package apiv1
 
+import "encoding/json"
+
 // WalletType represents the blockchain type of a wallet.
 type WalletType string
 
@@ -110,22 +112,15 @@ type UpdateTrackedWalletRequest struct {
 // All fields are optional and only provided fields will be updated (partial update).
 // This is the preferred method for updating specific fields without affecting others.
 type UpdateTrackedWalletV2Request struct {
-	// Label updates the wallet's custom label.
-	Label *string `json:"label,omitempty"`
-	// ListID assigns the wallet to a different list.
-	ListID *int `json:"list_id,omitempty"`
-	// MinUSD sets the minimum USD threshold for transaction notifications.
-	MinUSD *float64 `json:"min_usd,omitempty"`
-	// TxTypes filters notifications by transaction types.
-	TxTypes []string `json:"tx_types,omitempty"`
-	// Chains filters notifications by blockchain chains.
-	Chains []string `json:"chains,omitempty"`
-	// NewTrades enables/disables notifications for new token trades.
-	NewTrades *bool `json:"new_trades,omitempty"`
-	// TelegramBot specifies the Telegram bot for notifications.
-	TelegramBot *string `json:"telegram_bot,omitempty"`
-	// DiscordChannel specifies the Discord channel for notifications.
-	DiscordChannel *string `json:"discord_channel,omitempty"`
+	Label            *string  `json:"label,omitempty"`
+	ListID           *int     `json:"list_id,omitempty"`
+	BundleID         *int     `json:"bundle_id,omitempty"`
+	MinAmountUSD     *float64 `json:"min_amount_usd,omitempty"`
+	Filters          []int    `json:"filters,omitempty"`
+	Chains           []int    `json:"chains,omitempty"`
+	NewTrades        *bool    `json:"new_trades,omitempty"`
+	TelegramBotID    *int     `json:"telegram_bot_id,omitempty"`
+	DiscordChannelID *string  `json:"discord_channel_id,omitempty"`
 }
 
 // TelegramBot represents a Telegram bot available for sending wallet notifications.
@@ -156,4 +151,22 @@ type TelegramBot struct {
 type GetTelegramBotsResponse struct {
 	// Bots is the list of available Telegram bots.
 	Bots []TelegramBot `json:"bots"`
+}
+
+// MarshalJSON distinguishes omitted slices from explicit empty slices, allowing
+// callers to clear filters/chains without changing other notification settings.
+func (r UpdateTrackedWalletV2Request) MarshalJSON() ([]byte, error) {
+	type plain UpdateTrackedWalletV2Request
+	var filters, chains *[]int
+	if r.Filters != nil {
+		filters = &r.Filters
+	}
+	if r.Chains != nil {
+		chains = &r.Chains
+	}
+	return json.Marshal(struct {
+		plain
+		Filters *[]int `json:"filters,omitempty"`
+		Chains  *[]int `json:"chains,omitempty"`
+	}{plain: plain(r), Filters: filters, Chains: chains})
 }

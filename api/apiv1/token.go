@@ -14,7 +14,7 @@ type TokensPnLRequest struct {
 	Wallet string
 	// Chains filters PnL by specific blockchain chains.
 	Chains []chains.ChainType
-	// Timeframe specifies the time period for PnL calculation (e.g., "7d", "30d", "all").
+	// Timeframe specifies the time period for PnL calculation (e.g., "7d", "30d", "max").
 	Timeframe *string
 	// NextObject is the pagination cursor from the previous response.
 	NextObject *string
@@ -32,11 +32,11 @@ func (r *TokensPnLRequest) GetQueryString() string {
 
 	// Add chains if specified
 	if len(r.Chains) > 0 {
-		var chainStrs []string
+		chainStrs := make([]string, 0, len(r.Chains))
 		for _, chain := range r.Chains {
 			chainStrs = append(chainStrs, string(chain))
 		}
-		values.Add("chains", strings.Join(chainStrs, ","))
+		values.Add("chain", strings.Join(chainStrs, ","))
 	}
 
 	// Add timeframe if specified
@@ -95,6 +95,19 @@ type TokenPnl struct {
 
 	TokenPrice float64 `json:"token_price"`
 
-	NumSwaps   int  `json:"num_swaps"`
-	IsHoneypot bool `json:"is_honeypot"`
+	NumSwaps            int     `json:"num_swaps"`
+	IsHoneypot          bool    `json:"is_honeypot"`
+	NumBuys             int64   `json:"num_buys"`
+	NumSells            int64   `json:"num_sells"`
+	Dex                 string  `json:"dex,omitempty"`
+	AssetID             string  `json:"asset_id,omitempty"`
+	FirstTrade          int64   `json:"first_trade"`
+	LastTrade           int64   `json:"last_trade"`
+	HoldingTimeSeconds  int64   `json:"holding_time_seconds"`
+	HoldingAmount       float64 `json:"holding_amount"`
+	HoldingAmountUsd    float64 `json:"holding_amount_usd"`
+	TokenMarketCapUsd   float64 `json:"token_market_cap_usd"`
+	AvgBuyMarketCapUsd  float64 `json:"avg_buy_market_cap_usd"`
+	AvgSellMarketCapUsd float64 `json:"avg_sell_market_cap_usd"`
+	TokenAge            int64   `json:"token_age"`
 }

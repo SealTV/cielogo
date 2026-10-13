@@ -94,64 +94,13 @@ func TestTradingStatsRequest_GetQueryString(t *testing.T) {
 }
 
 func TestTradingStatsResponse_JSON(t *testing.T) {
-	response := apiv1.TradingStatsResponse{
-		TotalTrades:         150,
-		SuccessfulTrades:    120,
-		FailedTrades:        30,
-		WinRate:             80.0,
-		AverageProfit:       125.50,
-		TotalProfit:         15060.0,
-		TotalVolume:         250000.0,
-		MostTradedToken:     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-		MostProfitableToken: "So11111111111111111111111111111111111111112",
-		TradingFrequency:    "high",
-		LastTradeTimestamp:  1699564800,
-	}
-
-	data, err := json.Marshal(response)
-	require.NoError(t, err)
-
 	var decoded apiv1.TradingStatsResponse
-	err = json.Unmarshal(data, &decoded)
+	err := json.Unmarshal([]byte(`{"pnl":15060,"winrate":0.8,"swaps_count":150,"buy_count":120,"sell_count":30,"average_buy_amount_usd":125.5,"roi_distribution":{"roi_above_500":2},"holding_distribution":{"hold_gt_24_hours":4}}`), &decoded)
 	require.NoError(t, err)
-
-	assert.Equal(t, response.TotalTrades, decoded.TotalTrades)
-	assert.Equal(t, response.SuccessfulTrades, decoded.SuccessfulTrades)
-	assert.Equal(t, response.FailedTrades, decoded.FailedTrades)
-	assert.Equal(t, response.WinRate, decoded.WinRate)
-	assert.Equal(t, response.AverageProfit, decoded.AverageProfit)
-	assert.Equal(t, response.TotalProfit, decoded.TotalProfit)
-	assert.Equal(t, response.TotalVolume, decoded.TotalVolume)
-	assert.Equal(t, response.MostTradedToken, decoded.MostTradedToken)
-	assert.Equal(t, response.MostProfitableToken, decoded.MostProfitableToken)
-	assert.Equal(t, response.TradingFrequency, decoded.TradingFrequency)
-	assert.Equal(t, response.LastTradeTimestamp, decoded.LastTradeTimestamp)
-}
-
-func TestTradingStatsResponse_EmptyStats(t *testing.T) {
-	// Test with a wallet that has no trades
-	response := apiv1.TradingStatsResponse{
-		TotalTrades:         0,
-		SuccessfulTrades:    0,
-		FailedTrades:        0,
-		WinRate:             0.0,
-		AverageProfit:       0.0,
-		TotalProfit:         0.0,
-		TotalVolume:         0.0,
-		MostTradedToken:     "",
-		MostProfitableToken: "",
-		TradingFrequency:    "none",
-		LastTradeTimestamp:  0,
-	}
-
-	data, err := json.Marshal(response)
-	require.NoError(t, err)
-
-	var decoded apiv1.TradingStatsResponse
-	err = json.Unmarshal(data, &decoded)
-	require.NoError(t, err)
-
-	assert.Equal(t, 0, decoded.TotalTrades)
-	assert.Equal(t, 0.0, decoded.WinRate)
-	assert.Equal(t, "", decoded.MostTradedToken)
+	assert.Equal(t, int64(150), decoded.SwapsCount)
+	assert.Equal(t, 0.8, decoded.WinRate)
+	assert.Equal(t, 15060.0, decoded.PnL)
+	assert.Equal(t, 125.5, decoded.AverageBuyAmountUSD)
+	assert.Equal(t, 2.0, decoded.ROIDistribution.ROIAbove500)
+	assert.Equal(t, int64(4), decoded.HoldingDistribution.HoldGT24Hours)
 }

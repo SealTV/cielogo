@@ -1,10 +1,16 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Error struct {
-	Message string `json:"message"`
-	Status  string `json:"status"`
+	StatusCode         int           `json:"-"`
+	RetryAfter         string        `json:"-"`
+	RetryAfterDuration time.Duration `json:"-"`
+	Message            string        `json:"message"`
+	Status             string        `json:"status"`
 }
 
 func (e Error) Error() string {

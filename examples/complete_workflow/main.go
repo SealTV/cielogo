@@ -79,10 +79,10 @@ func main() {
 		log.Printf("⚠ Failed to get trading stats: %v\n", err)
 	} else {
 		fmt.Printf("✓ Trading Stats Retrieved:\n")
-		fmt.Printf("  Total Profit: $%.2f\n", tradingStats.TotalProfit)
+		fmt.Printf("  Total Profit: $%.2f\n", tradingStats.PnL)
 		fmt.Printf("  Win Rate: %.1f%%\n", tradingStats.WinRate*100)
-		fmt.Printf("  Total Trades: %d\n", tradingStats.TotalTrades)
-		fmt.Printf("  Average Profit: $%.2f\n\n", tradingStats.AverageProfit)
+		fmt.Printf("  Total Trades: %d\n", tradingStats.SwapsCount)
+		fmt.Printf("  Average Buy Amount: $%.2f\n\n", tradingStats.AverageBuyAmountUSD)
 	}
 
 	// Step 4: Get current portfolio
@@ -184,7 +184,7 @@ func main() {
 	fmt.Printf("Tracked Wallet: %s (ID: %d)\n", trackedWallet.Label, trackedWallet.ID)
 	fmt.Printf("Portfolio Value: $%.2f\n", portfolio.TotalUSDValue)
 	if tradingStats != nil {
-		fmt.Printf("Total Profit: $%.2f | Win Rate: %.1f%%\n", tradingStats.TotalProfit, tradingStats.WinRate*100)
+		fmt.Printf("Total Profit: $%.2f | Win Rate: %.1f%%\n", tradingStats.PnL, tradingStats.WinRate*100)
 	}
 
 	fmt.Println("\n=== Estimated API Credits Used ===")

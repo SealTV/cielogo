@@ -69,7 +69,7 @@ func TestGetWalletPortfolioV2(t *testing.T) {
 	server := testutil.NewMockServer(t)
 	server.SetResponse("/v2/portfolio?wallet=wallet1", mockResp)
 
-	client := cielogo.NewClient("test-key", cielogo.WithBaseURL(server.URL))
+	client := cielogo.NewClient("test-key", cielogo.WithPortfolioBaseURL(server.URL))
 	ctx := context.Background()
 
 	req := &apiv1.WalletPortfolioV2Request{
@@ -87,12 +87,11 @@ func TestGetWalletPortfolioV2(t *testing.T) {
 func TestGetTokenMetadataV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.TokenMetadataResponse]{
 		Data: apiv1.TokenMetadataResponse{
-			Chain:    "solana",
-			Address:  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-			Name:     "USD Coin",
-			Symbol:   "USDC",
-			Decimals: 6,
-			Supply:   1000000000000,
+			Chain:   "solana",
+			Address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+			Name:    "USD Coin",
+			Symbol:  "USDC",
+			Supply:  1000000000000,
 		},
 	}
 
@@ -189,7 +188,6 @@ func TestGetTokenBalanceV1(t *testing.T) {
 			TokenPriceUSD: 1.0,
 			Balance:       1000.50,
 			TotalUSDValue: 1000.50,
-			Decimals:      6,
 		},
 	}
 
@@ -216,12 +214,12 @@ func TestGetTokenBalanceV1(t *testing.T) {
 func TestGetTradingStatsV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.TradingStatsResponse]{
 		Data: apiv1.TradingStatsResponse{
-			TotalTrades:      150,
-			SuccessfulTrades: 120,
-			FailedTrades:     30,
-			WinRate:          80.0,
-			AverageProfit:    125.50,
-			TotalProfit:      15060.0,
+			SwapsCount:          150,
+			BuyCount:            120,
+			SellCount:           30,
+			WinRate:             0.8,
+			AverageBuyAmountUSD: 125.50,
+			PnL:                 15060.0,
 		},
 	}
 
@@ -240,8 +238,8 @@ func TestGetTradingStatsV1(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
-	assert.Equal(t, 150, resp.TotalTrades)
-	assert.Equal(t, 80.0, resp.WinRate)
+	assert.Equal(t, int64(150), resp.SwapsCount)
+	assert.Equal(t, 0.8, resp.WinRate)
 }
 
 func TestErrorResponse(t *testing.T) {

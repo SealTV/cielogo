@@ -3,6 +3,11 @@ package chains
 type ChainType string
 
 const (
+	Arc          ChainType = "arc"
+	Robinhood    ChainType = "robinhood"
+	Sui          ChainType = "sui"
+	Hyperliquid  ChainType = "hyperliquid"
+	Sonic        ChainType = "sonic"
 	Arbitrum     ChainType = "arbitrum"
 	Aurora       ChainType = "aurora"
 	Avalanche    ChainType = "avalanche"

@@ -1,0 +1,1 @@
+{"status":"ok","data":{"pnl":123.5,"winrate":0.8,"swaps_count":10,"buy_count":6,"sell_count":4,"roi_distribution":{"roi_above_500":2},"total_buy_amount_usd":1000,"total_sell_amount_usd":1200,"average_buy_amount_usd":166.6,"average_sell_amount_usd":300,"average_holding_time_sec":900,"consecutive_trading_days":3,"holding_distribution":{"hold_gt_24_hours":2,"total_tokens":5}}}

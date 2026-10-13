@@ -11,6 +11,7 @@ import (
 type AggregatedTokenPnLTimeframe string
 
 const (
+	AggregatedTokenPnLTimeframeMax   AggregatedTokenPnLTimeframe = "max"
 	AggregatedTokenPnLTimeframe1Day  AggregatedTokenPnLTimeframe = "1d"
 	AggregatedTokenPnLTimeframe7Day  AggregatedTokenPnLTimeframe = "7d"
 	AggregatedTokenPnLTimeframe30Day AggregatedTokenPnLTimeframe = "30d"
@@ -28,7 +29,7 @@ func (r *AggregatedTokenPnLRequest) GetQueryString() string {
 
 	// Add chains if specified
 	if len(r.Chains) > 0 {
-		var chainStrs []string
+		chainStrs := make([]string, 0, len(r.Chains))
 		for _, chain := range r.Chains {
 			chainStrs = append(chainStrs, string(chain))
 		}
@@ -61,6 +62,10 @@ type AggregatedTokenPnLResponse struct {
 	CombinedPnlUsd        float64 `json:"combined_pnl_usd"`
 	CombinedRoiPercentage float64 `json:"combined_roi_percentage"`
 
-	Winrate            float64 `json:"winrate"`
-	AverageHoldingTime float64 `json:"average_holding_time"`
+	Winrate                   float64 `json:"winrate"`
+	AverageHoldingTime        float64 `json:"average_holding_time"`
+	AverageHoldingTimeSeconds int64   `json:"average_holding_time_seconds"`
+	MedianHoldingTimeSeconds  int64   `json:"median_holding_time_seconds"`
+	TotalBuyUsd               float64 `json:"total_buy_usd"`
+	TotalSellUsd              float64 `json:"total_sell_usd"`
 }

@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/sealtv/cielogo/api"
 )
@@ -14,9 +17,10 @@ import (
 const apiBaseUrl = "https://feed-api.cielo.finance/api"
 
 type Client struct {
-	apiKey  string
-	baseURL string
-	cli     *http.Client
+	portfolioBaseURL string
+	apiKey           string
+	baseURL          string
+	cli              *http.Client
 }
 
 // ClientOption is a function that configures a Client
@@ -32,8 +36,14 @@ func WithHTTPClient(client *http.Client) ClientOption {
 // WithBaseURL sets a custom base URL (useful for testing)
 func WithBaseURL(baseURL string) ClientOption {
 	return func(c *Client) {
-		c.baseURL = baseURL
+		c.baseURL = strings.TrimRight(baseURL, "/")
 	}
+}
+
+// WithPortfolioBaseURL configures the private API base URL for portfolio V2.
+// Include /api in the URL. The public API does not register this endpoint.
+func WithPortfolioBaseURL(baseURL string) ClientOption {
+	return func(c *Client) { c.portfolioBaseURL = strings.TrimRight(baseURL, "/") }
 }
 
 func NewClient(apiKey string, opts ...ClientOption) *Client {
@@ -60,7 +70,11 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 }
 
 func (c *Client) makeRequest(ctx context.Context, method, path string, bodyObj, out any) error {
-	url := c.baseURL + path
+	return c.makeRequestAt(ctx, c.baseURL, method, path, bodyObj, out)
+}
+
+func (c *Client) makeRequestAt(ctx context.Context, baseURL, method, path string, bodyObj, out any) error {
+	url := baseURL + path
 
 	var body io.Reader
 	if bodyObj != nil {
@@ -87,16 +101,23 @@ func (c *Client) makeRequest(ctx context.Context, method, path string, bodyObj, 
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		var cErr error = &api.Error{}
-		if err := json.NewDecoder(resp.Body).Decode(cErr); err != nil {
-			return fmt.Errorf("failed to unmarshal error response body: %w, status code: %d", err, resp.StatusCode)
+	if resp.StatusCode == http.StatusAccepted || resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		cErr := &api.Error{StatusCode: resp.StatusCode, RetryAfter: resp.Header.Get("Retry-After")}
+		if seconds, err := strconv.ParseInt(cErr.RetryAfter, 10, 64); err == nil && seconds >= 0 && seconds <= int64((1<<63-1)/time.Second) {
+			cErr.RetryAfterDuration = time.Duration(seconds) * time.Second
+		} else if deadline, err := http.ParseTime(cErr.RetryAfter); err == nil {
+			cErr.RetryAfterDuration = time.Until(deadline)
+			if cErr.RetryAfterDuration < 0 {
+				cErr.RetryAfterDuration = 0
+			}
 		}
-
+		if err := json.NewDecoder(resp.Body).Decode(cErr); err != nil {
+			cErr.Message = http.StatusText(resp.StatusCode)
+		}
 		return cErr
 	}
 
-	if resp != nil && out != nil {
+	if out != nil && resp.StatusCode != http.StatusNoContent {
 		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
 			return fmt.Errorf("failed to unmarshal response body: %w", err)
 		}

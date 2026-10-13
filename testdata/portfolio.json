@@ -1,0 +1,1 @@
+{"status":"ok","data":{"last_updated":1699564800,"total_usd":1234.56,"portfolio":[{"token_address":"SOL","balance":2,"balance_raw":"2000000000","total_usd_value":300,"wallet_address":"wallet1","total_native_value":2}],"chains":[{"chain":"solana","total_usd":1234.56,"percentage":100}],"pending_chains":["ethereum"]}}

@@ -28,7 +28,7 @@ type FeedRequest struct {
 	MinUSD *float64
 	// Filter transactions by new trades.
 	NewTrades *bool
-	// Set value from response 'paging.next_object_id' to get next page.
+	// Set paging.next_cursor from the previous response to get the next page.
 	StartFrom *string
 	// Filter transactions from a specific UNIX timestamp.
 	FromTimestamp *int64
@@ -71,7 +71,7 @@ func (r *FeedRequest) GetQueryString() string {
 			txTypeStrs = append(txTypeStrs, string(txType))
 		}
 
-		values.Add("tx_types", strings.Join(txTypeStrs, ","))
+		values.Add("txTypes", strings.Join(txTypeStrs, ","))
 	}
 
 	if len(r.Tokens) > 0 {
@@ -110,6 +110,6 @@ func (r *FeedRequest) GetQueryString() string {
 }
 
 type FeedResponse struct {
-	Items  []TxEvent  `json:"items"`
-	Paging Pagination `json:"paging"`
+	Items  []TxEvent      `json:"items"`
+	Paging FeedPagination `json:"paging"`
 }

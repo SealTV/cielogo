@@ -33,53 +33,58 @@ const (
 	TxTypeWrap                TxType = "wrap"
 )
 
+// Additional event and virtual filter types supported by the API.
+const (
+	TxTypeNftMint           TxType = TxTypeNftMitnt
+	TxTypePerpOrder         TxType = "perp_order"
+	TxTypePerpTwap          TxType = "perp_twap"
+	TxTypePerpImminentLiq   TxType = "perp_imminent_liq"
+	TxTypeHyperliquidLedger TxType = "hyperliquid_ledger"
+	TxTypeSwapBuy           TxType = "swap_buy"
+	TxTypeSwapSell          TxType = "swap_sell"
+	TxTypeTransferIn        TxType = "transfer_in"
+	TxTypeTransferOut       TxType = "transfer_out"
+)
+
+// TokenMarketCap contains enrichment requested with IncludeMarketCap.
+type TokenMarketCap struct {
+	TokenAddress string  `json:"token_address"`
+	MarketCap    float64 `json:"market_cap"`
+	Liquidity    float64 `json:"liquidity"`
+}
+
 type TxEvent struct {
-	Wallet      string           `json:"wallet"`
-	WalletLabel string           `json:"wallet_label"`
-	TxHash      string           `json:"tx_hash"`
-	TxType      TxType           `json:"tx_type"`
-	Chain       chains.ChainType `json:"chain"`
-	Index       int              `json:"index"`
-	Timestamp   int64            `json:"timestamp"`
-	Block       int              `json:"block"`
-	Data        TransactionEvent `json:"-"`
+	Wallet         string           `json:"wallet"`
+	WalletLabel    string           `json:"wallet_label"`
+	TxHash         string           `json:"tx_hash"`
+	TxType         TxType           `json:"tx_type"`
+	Chain          chains.ChainType `json:"chain"`
+	Index          int              `json:"index"`
+	Timestamp      int64            `json:"timestamp"`
+	Block          uint             `json:"block"`
+	TokenMarketCap *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Verification   json.RawMessage  `json:"verification,omitempty"`
+	Migration      json.RawMessage  `json:"migration,omitempty"`
+	Data           TransactionEvent `json:"-"`
 }
 
 func (t *TxEvent) UnmarshalJSON(data []byte) error {
-	tmp := struct {
-		Wallet      string           `json:"wallet"`
-		WalletLabel string           `json:"wallet_label"`
-		TxHash      string           `json:"tx_hash"`
-		TxType      TxType           `json:"tx_type"`
-		Chain       chains.ChainType `json:"chain"`
-		Index       int              `json:"index"`
-		Timestamp   int64            `json:"timestamp"`
-		Block       int              `json:"block"`
-	}{}
-
-	if err := json.Unmarshal(data, &tmp); err != nil {
+	type header TxEvent
+	var decoded header
+	if err := json.Unmarshal(data, &decoded); err != nil {
 		return fmt.Errorf("failed to unmarshal tx event: %w", err)
 	}
-
-	t.Wallet = tmp.Wallet
-	t.WalletLabel = tmp.WalletLabel
-	t.TxHash = tmp.TxHash
-	t.TxType = tmp.TxType
-	t.Chain = tmp.Chain
-	t.Index = tmp.Index
-	t.Timestamp = tmp.Timestamp
-	t.Block = tmp.Block
-
-	t.Data = createTransactionEventByType(tmp.TxType)
-
-	if err := json.Unmarshal(data, t.Data); err != nil {
-		return fmt.Errorf("failed to unmarshal tx event %q data: %w", string(t.TxType), err)
+	decoded.Data = createTransactionEventByType(decoded.TxType)
+	if decoded.Data == nil {
+		decoded.Data = &UnknownTransactionEvent{Type: decoded.TxType, Raw: append(json.RawMessage(nil), data...)}
+	} else if err := json.Unmarshal(data, decoded.Data); err != nil {
+		return fmt.Errorf("failed to unmarshal tx event %q data: %w", decoded.TxType, err)
 	}
-
+	*t = TxEvent(decoded)
 	return nil
 }
 
-// createTransactionEventByType creates the appropriate TransactionEvent based on the transaction type.
+//nolint:funlen // One explicit case per supported protocol event.
 func createTransactionEventByType(txType TxType) TransactionEvent {
 	switch txType {
 	case TxTypeBridge:
@@ -122,71 +127,32 @@ func createTransactionEventByType(txType TxType) TransactionEvent {
 		return &SudoPoolEvent{}
 	case TxTypeWrap:
 		return &WrapEvent{}
+	case TxTypePerpOrder:
+		return &PerpOrderEvent{}
+	case TxTypePerpTwap:
+		return &PerpTwapEvent{}
+	case TxTypePerpImminentLiq:
+		return &PerpImminentLiqEvent{}
+	case TxTypeHyperliquidLedger:
+		return &HyperliquidLedgerEvent{}
+	case TxTypeSwapBuy, TxTypeSwapSell, TxTypeTransferIn, TxTypeTransferOut:
+		return nil // Virtual query filters are not response event types.
 	default:
 		return nil
 	}
 }
 
-type TransactionEvent interface {
-	GetType() TxType
+type TransactionEvent interface{ GetType() TxType }
+
+// UnknownTransactionEvent preserves a future event without failing the whole page.
+type UnknownTransactionEvent struct {
+	Type TxType
+	Raw  json.RawMessage
 }
 
-type BridgeEvent struct {
-	Wallet       string           `json:"wallet"`
-	WalletLabel  string           `json:"wallet_label"`
-	TxHash       string           `json:"tx_hash"`
-	TxType       TxType           `json:"tx_type"`
-	Chain        chains.ChainType `json:"chain"`
-	Index        int              `json:"index"`
-	Timestamp    int64            `json:"timestamp"`
-	Block        int              `json:"block"`
-	From         string           `json:"from"`
-	To           string           `json:"to"`
-	FromLabel    string           `json:"from_label"`
-	ToLabel      string           `json:"to_label"`
-	TokenAddress string           `json:"token_address"`
-	TokenName    string           `json:"token_name"`
-	TokenSymbol  string           `json:"token_symbol"`
-	Amoun        float64          `json:"amount"`
-	AmountUSD    float64          `json:"amount_usd"`
-	FromChain    chains.ChainType `json:"from_chain"`
-	ToChain      chains.ChainType `json:"to_chain"`
-	Platfrom     string           `json:"platform"`
-	Price        float64          `json:"price"`
-	Type         string           `json:"type"`
-}
+func (e *UnknownTransactionEvent) GetType() TxType { return e.Type }
 
-func (b *BridgeEvent) GetType() TxType {
-	return TxTypeBridge
-}
-
-type LendingEvent struct {
-	Wallet       string           `json:"wallet"`
-	WalletLabel  string           `json:"wallet_label"`
-	TxHash       string           `json:"tx_hash"`
-	TxType       TxType           `json:"tx_type"`
-	Chain        chains.ChainType `json:"chain"`
-	Index        int              `json:"index"`
-	Timestamp    int64            `json:"timestamp"`
-	Block        int              `json:"block"`
-	From         string           `json:"from"`
-	FromLabel    string           `json:"from_label"`
-	Action       string           `json:"action"`
-	Address      string           `json:"address"`
-	Amount       float64          `json:"amount"`
-	AmountUSD    float64          `json:"amount_usd"`
-	Dex          string           `json:"dex"`
-	HealthFactor float64          `json:"health_factor"`
-	Name         string           `json:"name"`
-	Platform     string           `json:"platform"`
-	PriceUSD     float64          `json:"price_usd"`
-	Symbol       string           `json:"symbol"`
-}
-
-func (l *LendingEvent) GetType() TxType {
-	return TxTypeLending
-}
-
+// LP action values.
 type LpType string
 
 const (
@@ -194,15 +160,81 @@ const (
 	LpTypeRemove    = "remove"
 )
 
+// BridgeEvent is the API payload for TxTypeBridge.
+type BridgeEvent struct {
+	Wallet         string           `json:"wallet"`
+	WalletLabel    string           `json:"wallet_label,omitempty"`
+	TxHash         string           `json:"tx_hash"`
+	TxType         TxType           `json:"tx_type"`
+	Chain          chains.ChainType `json:"chain"`
+	Index          int              `json:"index"`
+	Timestamp      int64            `json:"timestamp"`
+	Block          uint             `json:"block"`
+	Verification   json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration      json.RawMessage  `json:"migration,omitempty"`
+	From           string           `json:"from"`
+	To             string           `json:"to"`
+	FromLabel      string           `json:"from_label"`
+	ToLabel        string           `json:"to_label"`
+	TokenAddress   string           `json:"token_address"`
+	TokenName      string           `json:"token_name"`
+	TokenSymbol    string           `json:"token_symbol"`
+	TokenIconLink  string           `json:"token_icon_link"`
+	Amoun          float64          `json:"amount"`
+	AmountUSD      float64          `json:"amount_usd"`
+	FromChain      string           `json:"from_chain"`
+	ToChain        string           `json:"to_chain"`
+	Platfrom       string           `json:"platform"`
+	Price          float64          `json:"price"`
+	Type           string           `json:"type"`
+}
+
+func (e *BridgeEvent) GetType() TxType { return TxTypeBridge }
+
+// LendingEvent is the API payload for TxTypeLending.
+type LendingEvent struct {
+	Wallet         string           `json:"wallet"`
+	WalletLabel    string           `json:"wallet_label,omitempty"`
+	TxHash         string           `json:"tx_hash"`
+	TxType         TxType           `json:"tx_type"`
+	Chain          chains.ChainType `json:"chain"`
+	Index          int              `json:"index"`
+	Timestamp      int64            `json:"timestamp"`
+	Block          uint             `json:"block"`
+	Verification   json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration      json.RawMessage  `json:"migration,omitempty"`
+	From           string           `json:"from"`
+	FromLabel      string           `json:"from_label"`
+	Action         string           `json:"action"`
+	Address        string           `json:"address"`
+	Amount         float64          `json:"amount"`
+	AmountUSD      float64          `json:"amount_usd"`
+	Dex            string           `json:"dex"`
+	HealthFactor   float64          `json:"health_factor"`
+	Name           string           `json:"name"`
+	Platform       string           `json:"platform"`
+	PriceUSD       float64          `json:"price_usd"`
+	Symbol         string           `json:"symbol"`
+	TokenIconLink  string           `json:"token_icon_link"`
+}
+
+func (e *LendingEvent) GetType() TxType { return TxTypeLending }
+
+// LpEvent is the API payload for TxTypeLP.
 type LpEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	Dex             string           `json:"dex"`
 	From            string           `json:"from"`
 	Type            LpType           `json:"type"`
@@ -212,29 +244,35 @@ type LpEvent struct {
 	Token0Name      string           `json:"token0_name"`
 	Token0PriceUSD  float64          `json:"token0_price_usd"`
 	Token0Symbol    string           `json:"token0_symbol"`
+	Token0IconLink  string           `json:"token0_icon_link"`
 	Token1Address   string           `json:"token1_address"`
 	Token1Amount    float64          `json:"token1_amount"`
 	Token1AmountUSD float64          `json:"token1_amount_usd"`
 	Token1Name      string           `json:"token1_name"`
 	Token1PriceUSD  float64          `json:"token1_price_usd"`
 	Token1Symbol    string           `json:"token1_symbol"`
+	Token1IconLink  string           `json:"token1_icon_link"`
 	LowerBound      float64          `json:"lower_bound"`
 	UpperBound      float64          `json:"upper_bound"`
+	FromLabel       string           `json:"from_label,omitempty"`
+	ToLabel         string           `json:"to_label,omitempty"`
 }
 
-func (l *LpEvent) GetType() TxType {
-	return TxTypeLP
-}
+func (e *LpEvent) GetType() TxType { return TxTypeLP }
 
+// NftLendingEvent is the API payload for TxTypeNftLending.
 type NftLendingEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	From            string           `json:"from"`
 	To              string           `json:"to"`
 	FromLabel       string           `json:"from_label"`
@@ -256,19 +294,21 @@ type NftLendingEvent struct {
 	Refinance       bool             `json:"refinance"`
 }
 
-func (n *NftLendingEvent) GetType() TxType {
-	return TxTypeNftLending
-}
+func (e *NftLendingEvent) GetType() TxType { return TxTypeNftLending }
 
+// NftMintEvent is the API payload for TxTypeNftMitnt.
 type NftMintEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	From            string           `json:"from"`
 	To              string           `json:"to"`
 	FromLabel       string           `json:"from_label"`
@@ -288,19 +328,21 @@ type NftMintEvent struct {
 	ValueUsd        float64          `json:"value_usd"`
 }
 
-func (n *NftMintEvent) GetType() TxType {
-	return TxTypeNftMitnt
-}
+func (e *NftMintEvent) GetType() TxType { return TxTypeNftMitnt }
 
+// NftTradeEvent is the API payload for TxTypeNftTrade.
 type NftTradeEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	From            string           `json:"from"`
 	To              string           `json:"to"`
 	Thtumbnail      string           `json:"thumbnail"`
@@ -320,22 +362,27 @@ type NftTradeEvent struct {
 	Seller          string           `json:"seller"`
 	Token           string           `json:"token"`
 	FirsInteraction bool             `json:"first_interaction"`
+	IsSell          bool             `json:"is_sell"`
 	BidAccepted     bool             `json:"bid_accepted"`
+	FromLabel       string           `json:"from_label,omitempty"`
+	ToLabel         string           `json:"to_label,omitempty"`
 }
 
-func (n *NftTradeEvent) GetType() TxType {
-	return TxTypeNftTrade
-}
+func (e *NftTradeEvent) GetType() TxType { return TxTypeNftTrade }
 
+// NftTransferEvent is the API payload for TxTypeNftTransfer.
 type NftTransferEvent struct {
 	Wallet           string           `json:"wallet"`
-	WalletLabel      string           `json:"wallet_label"`
+	WalletLabel      string           `json:"wallet_label,omitempty"`
 	TxHash           string           `json:"tx_hash"`
 	TxType           TxType           `json:"tx_type"`
 	Chain            chains.ChainType `json:"chain"`
 	Index            int              `json:"index"`
 	Timestamp        int64            `json:"timestamp"`
-	Block            int              `json:"block"`
+	Block            uint             `json:"block"`
+	Verification     json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap   *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration        json.RawMessage  `json:"migration,omitempty"`
 	From             string           `json:"from"`
 	To               string           `json:"to"`
 	FromLabel        string           `json:"from_label"`
@@ -352,140 +399,174 @@ type NftTransferEvent struct {
 	Value            float64          `json:"value"`
 }
 
-func (n *NftTransferEvent) GetType() TxType {
-	return TxTypeNftTransfer
-}
+func (e *NftTransferEvent) GetType() TxType { return TxTypeNftTransfer }
 
+// SwapEvent is the API payload for TxTypeSwap.
 type SwapEvent struct {
-	Wallet       string           `json:"wallet"`
-	WalletLabel  string           `json:"wallet_label"`
-	TxHash       string           `json:"tx_hash"`
-	TxType       TxType           `json:"tx_type"`
-	Chain        chains.ChainType `json:"chain"`
-	Index        int              `json:"index"`
-	Timestamp    int64            `json:"timestamp"`
-	Block        int              `json:"block"`
-	From         string           `json:"from"`
-	To           string           `json:"to"`
-	FromLabel    string           `json:"from_label"`
-	ToLabel      string           `json:"to_label"`
-	TokenAddress string           `json:"token_address"`
-	TokenName    string           `json:"token_name"`
-	TokenSymbol  string           `json:"token_symbol"`
-	Amount       float64          `json:"amount"`
-	AmountUsd    float64          `json:"amount_usd"`
-	FromChain    string           `json:"from_chain"`
-	ToChain      string           `json:"to_chain"`
-	Platform     string           `json:"platform"`
-	Price        float64          `json:"price"`
-	Type         string           `json:"type"`
+	Wallet           string           `json:"wallet"`
+	WalletLabel      string           `json:"wallet_label,omitempty"`
+	TxHash           string           `json:"tx_hash"`
+	TxType           TxType           `json:"tx_type"`
+	Chain            chains.ChainType `json:"chain"`
+	Index            int              `json:"index"`
+	Timestamp        int64            `json:"timestamp"`
+	Block            uint             `json:"block"`
+	Verification     json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap   *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration        json.RawMessage  `json:"migration,omitempty"`
+	Dex              string           `json:"dex"`
+	From             string           `json:"from"`
+	To               string           `json:"to"`
+	Token0Address    string           `json:"token0_address"`
+	Token0Amount     float64          `json:"token0_amount"`
+	Token0AmountUsd  float64          `json:"token0_amount_usd"`
+	Token0PriceUsd   float64          `json:"token0_price_usd"`
+	Token0Name       string           `json:"token0_name"`
+	Token0Symbol     string           `json:"token0_symbol"`
+	Token0IconLink   string           `json:"token0_icon_link"`
+	Token1Address    string           `json:"token1_address"`
+	Token1Amount     float64          `json:"token1_amount"`
+	Token1AmountUsd  float64          `json:"token1_amount_usd"`
+	Token1PriceUsd   float64          `json:"token1_price_usd"`
+	Token1Name       string           `json:"token1_name"`
+	Token1Symbol     string           `json:"token1_symbol"`
+	Token1IconLink   string           `json:"token1_icon_link"`
+	FirstInteraction bool             `json:"first_interaction"`
+	IsSell           bool             `json:"is_sell"`
+	Platform         string           `json:"platform"`
+	PlatformURI      string           `json:"platform_uri"`
+	PlatformUI       string           `json:"platform_ui"`
+	FromLabel        string           `json:"from_label,omitempty"`
+	ToLabel          string           `json:"to_label,omitempty"`
+	IsOutcome        bool             `json:"is_outcome,omitempty"`
+	OutcomeQuestion  string           `json:"outcome_question,omitempty"`
+	OutcomeSide      string           `json:"outcome_side,omitempty"`
+	BuilderTag       string           `json:"builder_tag,omitempty"`
+	IsSettlement     bool             `json:"is_settlement,omitempty"`
+	ResolutionSide   string           `json:"resolution_side,omitempty"`
+	OutcomeClosedPnl float64          `json:"outcome_closed_pnl,omitempty"`
+	QuoteCoin        string           `json:"quote_coin,omitempty"`
+	AssetID          string           `json:"asset_id,omitempty"`
 }
 
-func (s *SwapEvent) GetType() TxType {
-	return TxTypeSwap
-}
+func (e *SwapEvent) GetType() TxType { return TxTypeSwap }
 
+// TransferEvent is the API payload for TxTypeTransfer.
 type TransferEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	From            string           `json:"from"`
 	To              string           `json:"to"`
 	FromLabel       string           `json:"from_label"`
 	ToLabel         string           `json:"to_label"`
+	Amount          float64          `json:"amount"`
 	AmountUsd       float64          `json:"amount_usd"`
 	ContractAddress string           `json:"contract_address"`
 	Name            string           `json:"name"`
 	Symbol          string           `json:"symbol"`
 	TokenPriceUsd   float64          `json:"token_price_usd"`
 	Type            string           `json:"type"`
+	TokenIconLink   string           `json:"token_icon_link"`
+	IsMempool       *bool            `json:"mempool,omitempty"`
 }
 
-func (t *TransferEvent) GetType() TxType {
-	return TxTypeTransfer
-}
+func (e *TransferEvent) GetType() TxType { return TxTypeTransfer }
 
+// ContractCreationEvent is the API payload for TxTypeContractCreation.
 type ContractCreationEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
-	AmountUsd       float64          `json:"amount_usd"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
+	AmountUsd       int              `json:"amount_usd"`
 	ContractAddress string           `json:"contract_address"`
 	From            string           `json:"from"`
 	FromLabel       string           `json:"from_label"`
 }
 
-func (c *ContractCreationEvent) GetType() TxType {
-	return TxTypeContractCreation
-}
+func (e *ContractCreationEvent) GetType() TxType { return TxTypeContractCreation }
 
-// This object provides a structure for representing a contract interaction event on the blockchain.
+// ContractInteractionEvent is the API payload for TxTypeContractInteraction.
 type ContractInteractionEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	From            string           `json:"from"`
 	To              string           `json:"to"`
 	ContractAddress string           `json:"contract_address"`
 	ContractLabel   string           `json:"contract_label"`
+	FromLabel       string           `json:"from_label,omitempty"`
+	ToLabel         string           `json:"to_label,omitempty"`
 }
 
-func (c *ContractInteractionEvent) GetType() TxType {
-	return TxTypeContractInteraction
-}
+func (e *ContractInteractionEvent) GetType() TxType { return TxTypeContractInteraction }
 
-// This object provides a structure for representing a flashloan event on the blockchain.
+// FlashloanEvent is the API payload for TxTypeFlashloan.
 type FlashloanEvent struct {
-	Wallet       string           `json:"wallet"`
-	WalletLabel  string           `json:"wallet_label"`
-	TxHash       string           `json:"tx_hash"`
-	TxType       TxType           `json:"tx_type"`
-	Chain        chains.ChainType `json:"chain"`
-	Index        int              `json:"index"`
-	Timestamp    int64            `json:"timestamp"`
-	Block        int              `json:"block"`
-	Address      string           `json:"address"`
-	Amount       float64          `json:"amount"`
-	AmountUsd    float64          `json:"amount_usd"`
-	Dex          string           `json:"dex"`
-	From         string           `json:"from"`
-	HealthFactor float64          `json:"health_factor"`
-	Name         string           `json:"name"`
-	Platform     string           `json:"platform"`
-	PriceUsd     float64          `json:"price_usd"`
-	Symbol       string           `json:"symbol"`
-	To           string           `json:"to"`
+	Wallet         string           `json:"wallet"`
+	WalletLabel    string           `json:"wallet_label,omitempty"`
+	TxHash         string           `json:"tx_hash"`
+	TxType         TxType           `json:"tx_type"`
+	Chain          chains.ChainType `json:"chain"`
+	Index          int              `json:"index"`
+	Timestamp      int64            `json:"timestamp"`
+	Block          uint             `json:"block"`
+	Verification   json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration      json.RawMessage  `json:"migration,omitempty"`
+	Address        string           `json:"address"`
+	Amount         float64          `json:"amount"`
+	AmountUsd      float64          `json:"amount_usd"`
+	Dex            string           `json:"dex"`
+	From           string           `json:"from"`
+	HealthFactor   float64          `json:"health_factor"`
+	Name           string           `json:"name"`
+	Platform       string           `json:"platform"`
+	PriceUsd       float64          `json:"price_usd"`
+	Symbol         string           `json:"symbol"`
+	TokenIconLink  string           `json:"token_icon_link"`
+	FromLabel      string           `json:"from_label,omitempty"`
 }
 
-func (f *FlashloanEvent) GetType() TxType {
-	return TxTypeFlashloan
-}
+func (e *FlashloanEvent) GetType() TxType { return TxTypeFlashloan }
 
-// This object provides a structure for representing a NFT liquidation event on the blockchain.
+// NftLiquidationEvent is the API payload for TxTypeNftLiquidation.
 type NftLiquidationEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	ContractAddress string           `json:"contract_address"`
 	CurrencyAddress string           `json:"currency_address"`
 	CurrencySymbol  string           `json:"currency_symbol"`
@@ -501,20 +582,21 @@ type NftLiquidationEvent struct {
 	TokenId         string           `json:"token_id"`
 }
 
-func (n *NftLiquidationEvent) GetType() TxType {
-	return TxTypeNftLiquidation
-}
+func (e *NftLiquidationEvent) GetType() TxType { return TxTypeNftLiquidation }
 
-// This object provides a structure for representing a NFT sweep event on the blockchain.
+// NftSweepEvent is the API payload for TxTypeNftSweep.
 type NftSweepEvent struct {
 	Wallet           string           `json:"wallet"`
-	WalletLabel      string           `json:"wallet_label"`
+	WalletLabel      string           `json:"wallet_label,omitempty"`
 	TxHash           string           `json:"tx_hash"`
 	TxType           TxType           `json:"tx_type"`
 	Chain            chains.ChainType `json:"chain"`
 	Index            int              `json:"index"`
 	Timestamp        int64            `json:"timestamp"`
-	Block            int              `json:"block"`
+	Block            uint             `json:"block"`
+	Verification     json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap   *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration        json.RawMessage  `json:"migration,omitempty"`
 	From             string           `json:"from"`
 	To               string           `json:"to"`
 	Thumbnail        string           `json:"thumbnail"`
@@ -534,23 +616,27 @@ type NftSweepEvent struct {
 	Seller           string           `json:"seller"`
 	Token            string           `json:"token"`
 	FirstInteraction bool             `json:"first_interaction"`
+	IsSell           bool             `json:"is_sell"`
 	BidAccepted      bool             `json:"bid_accepted"`
+	FromLabel        string           `json:"from_label,omitempty"`
+	ToLabel          string           `json:"to_label,omitempty"`
 }
 
-func (n *NftSweepEvent) GetType() TxType {
-	return TxTypeNftSweep
-}
+func (e *NftSweepEvent) GetType() TxType { return TxTypeNftSweep }
 
-// This object provides a structure for representing an option event on the blockchain.
+// OptionEvent is the API payload for TxTypeOption.
 type OptionEvent struct {
 	Wallet         string           `json:"wallet"`
-	WalletLabel    string           `json:"wallet_label"`
+	WalletLabel    string           `json:"wallet_label,omitempty"`
 	TxHash         string           `json:"tx_hash"`
 	TxType         TxType           `json:"tx_type"`
 	Chain          chains.ChainType `json:"chain"`
 	Index          int              `json:"index"`
 	Timestamp      int64            `json:"timestamp"`
-	Block          int              `json:"block"`
+	Block          uint             `json:"block"`
+	Verification   json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration      json.RawMessage  `json:"migration,omitempty"`
 	Action         string           `json:"action"`
 	Amount         float64          `json:"amount"`
 	Asset          string           `json:"asset"`
@@ -567,20 +653,21 @@ type OptionEvent struct {
 	Type           string           `json:"type"`
 }
 
-func (o *OptionEvent) GetType() TxType {
-	return TxTypeOption
-}
+func (e *OptionEvent) GetType() TxType { return TxTypeOption }
 
-// This object provides a structure for representing a Perpetual event on the blockchain.
+// PerpEvent is the API payload for TxTypePerp.
 type PerpEvent struct {
 	Wallet           string           `json:"wallet"`
-	WalletLabel      string           `json:"wallet_label"`
+	WalletLabel      string           `json:"wallet_label,omitempty"`
 	TxHash           string           `json:"tx_hash"`
 	TxType           TxType           `json:"tx_type"`
 	Chain            chains.ChainType `json:"chain"`
 	Index            int              `json:"index"`
 	Timestamp        int64            `json:"timestamp"`
-	Block            int              `json:"block"`
+	Block            uint             `json:"block"`
+	Verification     json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap   *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration        json.RawMessage  `json:"migration,omitempty"`
 	Action           string           `json:"action"`
 	AmountUsd        float64          `json:"amount_usd"`
 	AveragePrice     float64          `json:"average_price"`
@@ -590,7 +677,7 @@ type PerpEvent struct {
 	Dex              string           `json:"dex"`
 	From             string           `json:"from"`
 	Liquidation      bool             `json:"liquidation"`
-	LiquidationPrice float64          `json:"liquidation_price"`
+	LiquidationPrice float64          `json:"liquidation_price,omitempty"`
 	To               string           `json:"to"`
 	TradeDirection   string           `json:"trade_direction"`
 	PerpDetails      string           `json:"perp_details"`
@@ -600,6 +687,7 @@ type PerpEvent struct {
 	Token0Name       string           `json:"token0_name"`
 	Token0PriceUsd   float64          `json:"token0_price_usd"`
 	Token0Symbol     string           `json:"token0_symbol"`
+	Token0IconLink   string           `json:"token0_icon_link"`
 	Token1Address    string           `json:"token1_address"`
 	Token1Amount     float64          `json:"token1_amount"`
 	Token1AmountUsd  float64          `json:"token1_amount_usd"`
@@ -608,49 +696,55 @@ type PerpEvent struct {
 	Token1Symbol     string           `json:"token1_symbol"`
 	RealizedPnl      float64          `json:"realized_pnl"`
 	IsNftPerp        bool             `json:"is_nft_perp"`
-	PositionSize     float64          `json:"position_size"`
-	PositionSizeUsd  float64          `json:"position_size_usd"`
-	Leverage         float64          `json:"leverage"`
-	UnrealizedPnl    float64          `json:"unrealized_pnl"`
+	Token1IconLink   string           `json:"token1_icon_link"`
+	PositionSize     *float64         `json:"position_size"`
+	PositionSizeUsd  *float64         `json:"position_size_usd"`
+	Leverage         *float64         `json:"leverage"`
+	UnrealizedPnl    *float64         `json:"unrealized_pnl"`
+	FromLabel        string           `json:"from_label,omitempty"`
+	ToLabel          string           `json:"to_label,omitempty"`
 }
 
-func (p *PerpEvent) GetType() TxType {
-	return TxTypePerp
-}
+func (e *PerpEvent) GetType() TxType { return TxTypePerp }
 
-// This object provides a structure for representing a reward event on the blockchain.
+// RewardEvent is the API payload for TxTypeReward.
 type RewardEvent struct {
-	Wallet      string           `json:"wallet"`
-	WalletLabel string           `json:"wallet_label"`
-	TxHash      string           `json:"tx_hash"`
-	TxType      TxType           `json:"tx_type"`
-	Chain       chains.ChainType `json:"chain"`
-	Index       int              `json:"index"`
-	Timestamp   int64            `json:"timestamp"`
-	Block       int              `json:"block"`
-	Address     string           `json:"address"`
-	Amount      float64          `json:"amount"`
-	AmountUsd   float64          `json:"amount_usd"`
-	From        string           `json:"from"`
-	Name        string           `json:"name"`
-	PriceUsd    float64          `json:"price_usd"`
-	Symbol      string           `json:"symbol"`
+	Wallet         string           `json:"wallet"`
+	WalletLabel    string           `json:"wallet_label,omitempty"`
+	TxHash         string           `json:"tx_hash"`
+	TxType         TxType           `json:"tx_type"`
+	Chain          chains.ChainType `json:"chain"`
+	Index          int              `json:"index"`
+	Timestamp      int64            `json:"timestamp"`
+	Block          uint             `json:"block"`
+	Verification   json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration      json.RawMessage  `json:"migration,omitempty"`
+	Address        string           `json:"address"`
+	Amount         float64          `json:"amount"`
+	AmountUsd      float64          `json:"amount_usd"`
+	From           string           `json:"from"`
+	Name           string           `json:"name"`
+	PriceUsd       float64          `json:"price_usd"`
+	Symbol         string           `json:"symbol"`
+	FromLabel      string           `json:"from_label,omitempty"`
 }
 
-func (r *RewardEvent) GetType() TxType {
-	return TxTypeReward
-}
+func (e *RewardEvent) GetType() TxType { return TxTypeReward }
 
-// This object provides a structure for representing a staking event on the blockchain.
+// StakingEvent is the API payload for TxTypeStaking.
 type StakingEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	From            string           `json:"from"`
 	To              string           `json:"to"`
 	FromLabel       string           `json:"from_label"`
@@ -664,20 +758,21 @@ type StakingEvent struct {
 	Action          string           `json:"action"`
 }
 
-func (s *StakingEvent) GetType() TxType {
-	return TxTypeStaking
-}
+func (e *StakingEvent) GetType() TxType { return TxTypeStaking }
 
-// This object provides a structure for representing a Sudo Pool event on the blockchain.
+// SudoPoolEvent is the API payload for TxTypeSudoPool.
 type SudoPoolEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	Dex             string           `json:"dex"`
 	From            string           `json:"from"`
 	NftAddress      string           `json:"nft_address"`
@@ -691,22 +786,26 @@ type SudoPoolEvent struct {
 	Token0Name      string           `json:"token0_name"`
 	Token0PriceUsd  float64          `json:"token0_price_usd"`
 	Token0Symbol    string           `json:"token0_symbol"`
+	Token0IconLink  string           `json:"token0_icon_link"`
+	FromLabel       string           `json:"from_label,omitempty"`
+	ToLabel         string           `json:"to_label,omitempty"`
 }
 
-func (s *SudoPoolEvent) GetType() TxType {
-	return TxTypeSudoPool
-}
+func (e *SudoPoolEvent) GetType() TxType { return TxTypeSudoPool }
 
-// This object provides a structure for representing a wrap event on the blockchain.
+// WrapEvent is the API payload for TxTypeWrap.
 type WrapEvent struct {
 	Wallet          string           `json:"wallet"`
-	WalletLabel     string           `json:"wallet_label"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
 	TxHash          string           `json:"tx_hash"`
 	TxType          TxType           `json:"tx_type"`
 	Chain           chains.ChainType `json:"chain"`
 	Index           int              `json:"index"`
 	Timestamp       int64            `json:"timestamp"`
-	Block           int              `json:"block"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
 	Dex             string           `json:"dex"`
 	From            string           `json:"from"`
 	To              string           `json:"to"`
@@ -718,8 +817,179 @@ type WrapEvent struct {
 	Symbol          string           `json:"symbol"`
 	TokenPriceUsd   float64          `json:"token_price_usd"`
 	TokenType       string           `json:"token_type"`
+	TokenIconLink   string           `json:"token_icon_link"`
+	FromLabel       string           `json:"from_label,omitempty"`
+	ToLabel         string           `json:"to_label,omitempty"`
 }
 
-func (w *WrapEvent) GetType() TxType {
-	return TxTypeWrap
+func (e *WrapEvent) GetType() TxType { return TxTypeWrap }
+
+// PerpOrderEvent is the API payload for TxTypePerpOrder.
+type PerpOrderEvent struct {
+	Wallet          string           `json:"wallet"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
+	TxHash          string           `json:"tx_hash"`
+	TxType          TxType           `json:"tx_type"`
+	Chain           chains.ChainType `json:"chain"`
+	Index           int              `json:"index"`
+	Timestamp       int64            `json:"timestamp"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
+	Action          string           `json:"action"`
+	Status          string           `json:"status"`
+	TradeDirection  string           `json:"trade_direction"`
+	Side            string           `json:"side"`
+	Dex             string           `json:"dex"`
+	BaseTokenSymbol string           `json:"base_token_symbol"`
+	BaseTokenAmount float64          `json:"base_token_amount"`
+	AmountUsd       float64          `json:"amount_usd"`
+	AveragePrice    float64          `json:"average_price"`
+	LimitPx         float64          `json:"limit_px"`
+	Sz              float64          `json:"sz"`
+	OrigSz          float64          `json:"orig_sz"`
+	Oid             int64            `json:"oid"`
+	OrderType       string           `json:"order_type"`
+	Tif             string           `json:"tif"`
+	ReduceOnly      bool             `json:"reduce_only"`
+	Token0Address   string           `json:"token0_address"`
+	Token0Amount    float64          `json:"token0_amount"`
+	Token0AmountUsd float64          `json:"token0_amount_usd"`
+	Token0Name      string           `json:"token0_name"`
+	Token0PriceUsd  float64          `json:"token0_price_usd"`
+	Token0Symbol    string           `json:"token0_symbol"`
+	Token1Address   string           `json:"token1_address"`
+	Token1Amount    float64          `json:"token1_amount"`
+	Token1AmountUsd float64          `json:"token1_amount_usd"`
+	Token1Name      string           `json:"token1_name"`
+	Token1PriceUsd  float64          `json:"token1_price_usd"`
+	Token1Symbol    string           `json:"token1_symbol"`
 }
+
+func (e *PerpOrderEvent) GetType() TxType { return TxTypePerpOrder }
+
+// PerpTwapEvent is the API payload for TxTypePerpTwap.
+type PerpTwapEvent struct {
+	Wallet          string           `json:"wallet"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
+	TxHash          string           `json:"tx_hash"`
+	TxType          TxType           `json:"tx_type"`
+	Chain           chains.ChainType `json:"chain"`
+	Index           int              `json:"index"`
+	Timestamp       int64            `json:"timestamp"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
+	Action          string           `json:"action"`
+	Status          string           `json:"status"`
+	TradeDirection  string           `json:"trade_direction"`
+	Side            string           `json:"side"`
+	Dex             string           `json:"dex"`
+	BaseTokenSymbol string           `json:"base_token_symbol"`
+	BaseTokenAmount float64          `json:"base_token_amount"`
+	AmountUsd       float64          `json:"amount_usd"`
+	AveragePrice    float64          `json:"average_price"`
+	TwapId          int64            `json:"twap_id"`
+	TargetSize      float64          `json:"target_size"`
+	ExecutedSz      float64          `json:"executed_sz"`
+	ExecutedNtl     float64          `json:"executed_ntl"`
+	ProgressPct     float64          `json:"progress_pct"`
+	Minutes         int              `json:"minutes"`
+	ReduceOnly      bool             `json:"reduce_only"`
+	Randomize       bool             `json:"randomize"`
+	ErrorMsg        string           `json:"error_msg,omitempty"`
+	Token0Address   string           `json:"token0_address"`
+	Token0Amount    float64          `json:"token0_amount"`
+	Token0AmountUsd float64          `json:"token0_amount_usd"`
+	Token0Name      string           `json:"token0_name"`
+	Token0PriceUsd  float64          `json:"token0_price_usd"`
+	Token0Symbol    string           `json:"token0_symbol"`
+	Token1Address   string           `json:"token1_address"`
+	Token1Amount    float64          `json:"token1_amount"`
+	Token1AmountUsd float64          `json:"token1_amount_usd"`
+	Token1Name      string           `json:"token1_name"`
+	Token1PriceUsd  float64          `json:"token1_price_usd"`
+	Token1Symbol    string           `json:"token1_symbol"`
+}
+
+func (e *PerpTwapEvent) GetType() TxType { return TxTypePerpTwap }
+
+// PerpImminentLiqEvent is the API payload for TxTypePerpImminentLiq.
+type PerpImminentLiqEvent struct {
+	Wallet           string           `json:"wallet"`
+	WalletLabel      string           `json:"wallet_label,omitempty"`
+	TxHash           string           `json:"tx_hash"`
+	TxType           TxType           `json:"tx_type"`
+	Chain            chains.ChainType `json:"chain"`
+	Index            int              `json:"index"`
+	Timestamp        int64            `json:"timestamp"`
+	Block            uint             `json:"block"`
+	Verification     json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap   *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration        json.RawMessage  `json:"migration,omitempty"`
+	Action           string           `json:"action"`
+	TradeDirection   string           `json:"trade_direction"`
+	Dex              string           `json:"dex"`
+	BaseTokenSymbol  string           `json:"base_token_symbol"`
+	BaseTokenAmount  float64          `json:"base_token_amount"`
+	AmountUsd        float64          `json:"amount_usd"`
+	AveragePrice     float64          `json:"average_price"`
+	PositionSize     float64          `json:"position_size"`
+	PositionSizeUsd  float64          `json:"position_size_usd"`
+	DistancePct      float64          `json:"distance_pct"`
+	LiquidationPrice float64          `json:"liquidation_price"`
+	MarkPrice        float64          `json:"mark_price"`
+	Leverage         int              `json:"leverage"`
+	Token0Address    string           `json:"token0_address"`
+	Token0Amount     float64          `json:"token0_amount"`
+	Token0AmountUsd  float64          `json:"token0_amount_usd"`
+	Token0Name       string           `json:"token0_name"`
+	Token0PriceUsd   float64          `json:"token0_price_usd"`
+	Token0Symbol     string           `json:"token0_symbol"`
+	Token1Address    string           `json:"token1_address"`
+	Token1Amount     float64          `json:"token1_amount"`
+	Token1AmountUsd  float64          `json:"token1_amount_usd"`
+	Token1Name       string           `json:"token1_name"`
+	Token1PriceUsd   float64          `json:"token1_price_usd"`
+	Token1Symbol     string           `json:"token1_symbol"`
+}
+
+func (e *PerpImminentLiqEvent) GetType() TxType { return TxTypePerpImminentLiq }
+
+// HyperliquidLedgerEvent is the API payload for TxTypeHyperliquidLedger.
+type HyperliquidLedgerEvent struct {
+	Wallet          string           `json:"wallet"`
+	WalletLabel     string           `json:"wallet_label,omitempty"`
+	TxHash          string           `json:"tx_hash"`
+	TxType          TxType           `json:"tx_type"`
+	Chain           chains.ChainType `json:"chain"`
+	Index           int              `json:"index"`
+	Timestamp       int64            `json:"timestamp"`
+	Block           uint             `json:"block"`
+	Verification    json.RawMessage  `json:"verification,omitempty"`
+	TokenMarketCap  *TokenMarketCap  `json:"token_market_cap,omitempty"`
+	Migration       json.RawMessage  `json:"migration,omitempty"`
+	Action          string           `json:"action"`
+	LedgerType      string           `json:"ledger_type"`
+	Token           string           `json:"token"`
+	Amount          string           `json:"amount"`
+	UsdcValue       string           `json:"usdc_value"`
+	From            string           `json:"from"`
+	To              string           `json:"to"`
+	Hash            string           `json:"hash"`
+	Dex             string           `json:"dex"`
+	BaseTokenSymbol string           `json:"base_token_symbol"`
+	BaseTokenAmount float64          `json:"base_token_amount"`
+	AmountUsd       float64          `json:"amount_usd"`
+	AveragePrice    float64          `json:"average_price"`
+	Token0Address   string           `json:"token0_address"`
+	Token0Amount    float64          `json:"token0_amount"`
+	Token0AmountUsd float64          `json:"token0_amount_usd"`
+	Token0Name      string           `json:"token0_name"`
+	Token0PriceUsd  float64          `json:"token0_price_usd"`
+	Token0Symbol    string           `json:"token0_symbol"`
+}
+
+func (e *HyperliquidLedgerEvent) GetType() TxType { return TxTypeHyperliquidLedger }

@@ -18,7 +18,7 @@ func main() {
 	}
 
 	// Create client
-	client := cielogo.NewClient(apiKey)
+	client := cielogo.NewClient(apiKey, cielogo.WithPortfolioBaseURL(os.Getenv("CIELO_PORTFOLIO_BASE_URL")))
 	ctx := context.Background()
 
 	// Example 1: Get single wallet portfolio (V1)
@@ -43,6 +43,11 @@ func main() {
 		fmt.Printf("   Balance: %.6f\n", token.Balance)
 		fmt.Printf("   USD Value: $%.2f\n", token.TotalUSDValue)
 		fmt.Printf("   Price: $%.6f\n\n", token.TokenPriceUSD)
+	}
+
+	if os.Getenv("CIELO_PORTFOLIO_BASE_URL") == "" {
+		fmt.Println("Set CIELO_PORTFOLIO_BASE_URL to run private portfolio V2 examples.")
+		return
 	}
 
 	// Example 2: Get aggregated multi-wallet portfolio (V2)
@@ -80,13 +85,13 @@ func main() {
 	})
 	if err != nil {
 		log.Printf("Failed to get specific token balance: %v", err)
-	} else if len(tokenBalance.Portfolio) > 0 {
-		token := tokenBalance.Portfolio[0]
+	} else if tokenBalance.SingleToken != nil {
+		token := tokenBalance.SingleToken
 		fmt.Printf("Token: %s (%s)\n", token.TokenName, token.TokenSymbol)
 		fmt.Printf("Balance: %.6f\n", token.Balance)
 		fmt.Printf("USD Value: $%.2f\n", token.TotalUSDValue)
 	}
 
 	fmt.Println("\n=== Portfolio Analysis Complete ===")
-	fmt.Printf("Total API Credits Used: ~%d credits\n", 20+20*len(wallets)+20)
+	fmt.Println("Public portfolio V1 uses 20 credits; private API billing depends on its deployment.")
 }
