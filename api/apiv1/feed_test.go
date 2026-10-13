@@ -119,7 +119,7 @@ func TestFeedRequest_GetQueryString_TxTypes(t *testing.T) {
 	}
 
 	queryString := req.GetQueryString()
-	assert.Contains(t, queryString, "tx_types=swap%2Ctransfer")
+	assert.Contains(t, queryString, "txTypes=swap%2Ctransfer")
 }
 
 func TestFeedRequest_GetQueryString_Tokens(t *testing.T) {

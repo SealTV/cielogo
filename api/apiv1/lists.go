@@ -19,21 +19,21 @@ type GetAllWalletsListsResponse struct {
 }
 
 type AddWalletsListRequest struct {
-	Name           string   `json:"name"`
-	IsPublic       bool     `json:"is_public,omitempty"`
-	Wallets        []string `json:"wallets,omitempty"`
-	FollowedListID int64    `json:"followed_list_id,omitempty"`
-	Description    string   `json:"description,omitempty"`
+	Name           string  `json:"name"`
+	IsPublic       bool    `json:"is_public,omitempty"`
+	Wallets        []int64 `json:"wallets,omitempty"`
+	FollowedListID int64   `json:"followed_list_id,omitempty"`
+	Description    string  `json:"description,omitempty"`
 }
 
 type UpdateWalletsListRequest struct {
 	ListID int64 `json:"-"`
 
-	Name           string   `json:"name"`
-	IsPublic       bool     `json:"is_public,omitempty"`
-	Wallets        []string `json:"wallets,omitempty"`
-	FollowedListID int64    `json:"followed_list_id,omitempty"`
-	Description    string   `json:"description,omitempty"`
+	Name           string  `json:"name"`
+	IsPublic       bool    `json:"is_public,omitempty"`
+	Wallets        []int64 `json:"wallets,omitempty"`
+	FollowedListID int64   `json:"followed_list_id,omitempty"`
+	Description    string  `json:"description,omitempty"`
 }
 
 type ToggleFollowWalletsListResponce struct {

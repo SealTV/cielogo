@@ -36,7 +36,7 @@ func getTestClient(t *testing.T) *cielogo.Client {
 		t.Skip("CIELO_API_KEY not set, skipping integration test")
 	}
 
-	return cielogo.NewClient(apiKey)
+	return cielogo.NewClient(apiKey, cielogo.WithPortfolioBaseURL(os.Getenv("CIELO_PORTFOLIO_BASE_URL")))
 }
 
 func TestIntegration_GetWalletPortfolioV1(t *testing.T) {
@@ -51,6 +51,9 @@ func TestIntegration_GetWalletPortfolioV1(t *testing.T) {
 }
 
 func TestIntegration_GetWalletPortfolioV2(t *testing.T) {
+	if os.Getenv("CIELO_PORTFOLIO_BASE_URL") == "" {
+		t.Skip("private portfolio base URL not configured")
+	}
 	client := getTestClient(t)
 	ctx := context.Background()
 
@@ -67,6 +70,9 @@ func TestIntegration_GetWalletPortfolioV2(t *testing.T) {
 }
 
 func TestIntegration_GetWalletPortfolioV2_MultipleWallets(t *testing.T) {
+	if os.Getenv("CIELO_PORTFOLIO_BASE_URL") == "" {
+		t.Skip("private portfolio base URL not configured")
+	}
 	client := getTestClient(t)
 	ctx := context.Background()
 

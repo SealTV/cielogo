@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -12,20 +14,20 @@ import (
 )
 
 const (
-	wsURL = "wss://feed-api.cielo.finance/api/v1/ws"
-
-	pingPeriod     = 30 * time.Second
-	pongWait       = 60 * time.Second
 	writeWait      = 1 * time.Second
 	maxMessageSize = 512 * 1024
 )
 
 type WebsocketClient struct {
-	conn *websocket.Conn
+	conn    *websocket.Conn
+	writeMu sync.Mutex
 }
 
 func (c *Client) NewWebsocketConnection(ctx context.Context, opts ...WebsocketOption) (*WebsocketClient, error) {
-	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
+	wsURL := strings.TrimRight(c.baseURL, "/") + "/v1/ws"
+	wsURL = strings.Replace(wsURL, "https://", "wss://", 1)
+	wsURL = strings.Replace(wsURL, "http://", "ws://", 1)
+	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, http.Header{
 		"X-API-KEY": []string{c.apiKey},
 	})
 	if resp != nil && resp.Body != nil {
@@ -53,6 +55,8 @@ func (ws *WebsocketClient) Close() {
 }
 
 func (ws *WebsocketClient) SendCommand(cmd apiv1.WebSocketsCommand) error {
+	ws.writeMu.Lock()
+	defer ws.writeMu.Unlock()
 	if err := ws.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 		return fmt.Errorf("cannot set write deadline: %w", err)
 	}
@@ -64,24 +68,38 @@ func (ws *WebsocketClient) SendCommand(cmd apiv1.WebSocketsCommand) error {
 	return nil
 }
 
+// RunListener reads events until cancellation, normal closure or a read/decode error.
+// Cancellation closes the connection to unblock a pending read. Only one listener
+// may run per connection; SendCommand is safe for concurrent callers.
 func (ws *WebsocketClient) RunListener(ctx context.Context, out chan<- apiv1.WSEvent) error {
+	if err := ctx.Err(); err != nil {
+		ws.Close()
+		return err
+	}
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-ctx.Done():
+			ws.Close()
+		case <-done:
+		}
+	}()
 	for {
 		var event apiv1.WSEvent
-		err := ws.conn.ReadJSON(&event)
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				return fmt.Errorf("unexpected close error: %w", err)
+		if err := ws.conn.ReadJSON(&event); err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
 			}
-
-			if errors.Is(err, websocket.ErrCloseSent) {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) || errors.Is(err, websocket.ErrCloseSent) {
 				return nil
 			}
+			return fmt.Errorf("cannot read websocket event: %w", err)
 		}
-
 		select {
-		case out <- event:
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
+		case out <- event:
 		}
 	}
 }

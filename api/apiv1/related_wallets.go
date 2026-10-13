@@ -1,6 +1,10 @@
 package apiv1
 
-import "fmt"
+import (
+	"encoding/json"
+	"net/url"
+	"strconv"
+)
 
 // RelatedWalletsSorting defines the sorting criteria for related wallets.
 // Use these constants to sort wallets by inflow, outflow, or transaction count.
@@ -23,6 +27,10 @@ const (
 
 // RelatedWalletsRequest is used to find wallets that have transacted with the specified wallet.
 type RelatedWalletsRequest struct {
+	Timeframe     *string
+	FromTimestamp *int64
+	ToTimestamp   *int64
+	NextObject    *int
 	// Wallet is the wallet address to find related wallets for (required).
 	Wallet string `json:"wallet"`
 	// SortCriteria determines how the results are sorted (optional).
@@ -30,11 +38,23 @@ type RelatedWalletsRequest struct {
 }
 
 func (r *RelatedWalletsRequest) GetQueryString() string {
+	values := url.Values{}
 	if r.SortCriteria != nil {
-		return fmt.Sprintf("sort_criteria=%s", *r.SortCriteria)
+		values.Add("sort_criteria", string(*r.SortCriteria))
 	}
-
-	return ""
+	if r.Timeframe != nil {
+		values.Add("timeframe", *r.Timeframe)
+	}
+	if r.FromTimestamp != nil {
+		values.Add("from_timestamp", strconv.FormatInt(*r.FromTimestamp, 10))
+	}
+	if r.ToTimestamp != nil {
+		values.Add("to_timestamp", strconv.FormatInt(*r.ToTimestamp, 10))
+	}
+	if r.NextObject != nil {
+		values.Add("next_object", strconv.Itoa(*r.NextObject))
+	}
+	return values.Encode()
 }
 
 // RelatedWalletsResponse contains the list of wallets that have transacted with the queried wallet.
@@ -45,6 +65,7 @@ type RelatedWalletsResponse struct {
 
 // RelatedWallet represents a wallet that has had transactions with the queried wallet.
 type RelatedWallet struct {
+	Verification json.RawMessage `json:"verification,omitempty"`
 	// Wallet is the address of the related wallet.
 	Wallet string `json:"wallet"`
 	// Label is the custom label for this wallet, if any.

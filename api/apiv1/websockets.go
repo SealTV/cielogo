@@ -12,6 +12,7 @@ const (
 	WalletUnsubscribeCommandType CommandType = "unsubscribe_wallet"
 	FeedSubscribeCommandType     CommandType = "subscribe_feed"
 	FeedUnsubscribeCommandType   CommandType = "unsubscribe_feed"
+	PingCommandType              CommandType = "ping"
 )
 
 type WebSocketsCommand interface {
@@ -56,8 +57,9 @@ func (c *WalletUnsubscribeCmd) MarshalJSON() ([]byte, error) {
 }
 
 type FeedSubscribeCmd struct {
-	ListID *int64  `json:"list_id,omitempty"`
-	Filter *Filter `json:"filter,omitempty"`
+	MultiBundleID *int    `json:"multi_bundle_id,omitempty"`
+	ListID        *int64  `json:"list_id,omitempty"`
+	Filter        *Filter `json:"filter,omitempty"`
 }
 
 func (c *FeedSubscribeCmd) GetType() CommandType {
@@ -66,9 +68,10 @@ func (c *FeedSubscribeCmd) GetType() CommandType {
 
 func (c *FeedSubscribeCmd) MarshalJSON() ([]byte, error) {
 	body := map[string]any{
-		"type":    c.GetType(),
-		"list_id": c.ListID,
-		"filter":  c.Filter,
+		"type":            c.GetType(),
+		"list_id":         c.ListID,
+		"multi_bundle_id": c.MultiBundleID,
+		"filter":          c.Filter,
 	}
 
 	return json.Marshal(body)
@@ -105,6 +108,7 @@ const (
 	WalletUnsubscribedEventType EventType = "wallet_unsubscribed"
 	FeedSubscribedEventType     EventType = "feed_subscribed"
 	FeedUnsubscribedEventType   EventType = "feed_unsubscribed"
+	PongEventType               EventType = "pong"
 )
 
 type WSEvent struct {
@@ -136,7 +140,7 @@ func (e *WSEvent) UnmarshalJSON(b []byte) error {
 			e.Data = data
 		}
 	case WalletSubscribedEventType:
-		var data WalletSubscribeCmd
+		var data WalletSubscriptionAck
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
 			e.Data = data
 		}
@@ -146,17 +150,22 @@ func (e *WSEvent) UnmarshalJSON(b []byte) error {
 			e.Data = data
 		}
 	case FeedSubscribedEventType:
-		var data FeedSubscribeCmd
+		var data FeedSubscriptionAck
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
 			e.Data = data
 		}
 	case FeedUnsubscribedEventType:
-		var data FeedUnsubscribeCmd
+		var data string
+		if err = json.Unmarshal(tmp.Data, &data); err == nil {
+			e.Data = data
+		}
+	case PongEventType:
+		var data string
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
 			e.Data = data
 		}
 	default:
-		err = fmt.Errorf("unknown event type: %s", tmp.Type)
+		e.Data = append(json.RawMessage(nil), tmp.Data...)
 	}
 
 	if err != nil {
@@ -170,4 +179,31 @@ type WSEventError string
 
 func (err WSEventError) Error() string {
 	return string(err)
+}
+
+// SubscriptionFilter is the map-shaped filter returned in subscription acknowledgements.
+// Commands use Filter instead: the server expects arrays on input.
+type SubscriptionFilter struct {
+	TxTypes     map[TxType]bool `json:"tx_types,omitempty"`
+	Chains      map[string]bool `json:"chains,omitempty"`
+	Tokens      map[string]bool `json:"tokens,omitempty"`
+	MinUsdValue float64         `json:"min_usd_value,omitempty"`
+	NewTrade    bool            `json:"new_trade,omitempty"`
+}
+type WalletSubscriptionAck struct {
+	Wallet string              `json:"wallet"`
+	Filter *SubscriptionFilter `json:"filter,omitempty"`
+}
+type FeedSubscriptionAck struct {
+	ListID        *int64              `json:"list_id,omitempty"`
+	MultiBundleID *int                `json:"multi_bundle_id,omitempty"`
+	Filter        *SubscriptionFilter `json:"filter,omitempty"`
+}
+
+// PingCmd requests a JSON pong event; protocol-level pings are also handled by the dialer.
+type PingCmd struct{}
+
+func (c *PingCmd) GetType() CommandType { return PingCommandType }
+func (c *PingCmd) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]CommandType{"type": c.GetType()})
 }

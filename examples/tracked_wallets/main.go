@@ -28,8 +28,8 @@ func main() {
 	addedWallet, err := client.AddTrackedWalletsV1(ctx, &apiv1.AddTrackedWalletRequest{
 		Wallet:           walletToTrack,
 		Label:            "Whale Wallet #1",
-		MinAmountUSD:     apiv1.ToRef(1000.0),                                   // Only notify for transactions > $1000
-		TelegramBotID:    apiv1.ToRef(1),                                        // Telegram bot ID
+		MinAmountUSD:     apiv1.ToRef(1000.0),                                 // Only notify for transactions > $1000
+		TelegramBotID:    apiv1.ToRef(1),                                      // Telegram bot ID
 		DiscordChannelID: apiv1.ToRef("https://discord.com/api/webhooks/..."), // Discord webhook
 		NewTrades:        apiv1.ToRef(true),
 		Filters:          []int{1, 2}, // Filter IDs (swap, transfer, etc.)
@@ -67,9 +67,9 @@ func main() {
 	// Example 3: Update tracked wallet using V2 (partial update)
 	fmt.Println("=== Updating Tracked Wallet (V2 - Partial Update) ===")
 	updatedWallet, err := client.UpdateTrackedWalletV2(ctx, walletToTrack, &apiv1.UpdateTrackedWalletV2Request{
-		Label:  apiv1.ToRef("Updated Whale Wallet"),
-		MinUSD: apiv1.ToRef(5000.0), // Increase threshold to $5000
-		// Only update label and MinUSD, all other fields remain unchanged
+		Label:        apiv1.ToRef("Updated Whale Wallet"),
+		MinAmountUSD: apiv1.ToRef(5000.0), // Increase threshold to $5000
+		// Only update label and MinAmountUSD, all other fields remain unchanged
 	})
 	if err != nil {
 		log.Fatalf("Failed to update tracked wallet: %v", err)

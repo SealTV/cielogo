@@ -19,6 +19,11 @@ const (
 	TagTypeFlipper             TagType = "flipper"
 	TagTypeHoneypot            TagType = "honeypot"
 	TagTypeMev                 TagType = "mev"
+	TagTypeHumanOperated       TagType = "human_operated"
+	TagTypeSniper              TagType = "sniper"
+	TagTypeFreshWallet7d       TagType = "fresh_wallet_7d"
+	TagTypeTokenWhale500       TagType = "token_whale_500" //nolint:gosec // Public API tag identifier.
+	TagTypeNewWhale5000        TagType = "new_whale_5000"
 )
 
 type GetWalletTagsRequest struct {
@@ -52,7 +57,7 @@ type GetWalletsByTagRequest struct {
 }
 
 type GetWalletsByTagResponse struct {
-	Wallets []Wallet           `json:"items"`
+	Wallets []Wallet           `json:"wallets"`
 	Paging  WalletsByTagPaging `json:"paging"`
 }
 

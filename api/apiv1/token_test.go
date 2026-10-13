@@ -44,7 +44,7 @@ func TestTokensPnLRequest_GetQueryString_WithAllFilters(t *testing.T) {
 	}
 
 	queryString := req.GetQueryString()
-	assert.Contains(t, queryString, "chains=ethereum%2Csolana")
+	assert.Contains(t, queryString, "chain=ethereum%2Csolana")
 	assert.Contains(t, queryString, "timeframe=7d")
 	assert.Contains(t, queryString, "cex_transfers=false")
 	assert.Contains(t, queryString, "token=USDC%2CSOL")

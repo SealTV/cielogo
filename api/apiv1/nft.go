@@ -36,17 +36,17 @@ type NftsPnLResponse struct {
 
 type NftPnl struct {
 	Address string           `json:"token_address"`
-	Symbol  string           `json:"nft_symbol"`
-	Name    string           `json:"nft_name"`
+	Symbol  string           `json:"token_symbol"`
+	Name    string           `json:"token_name"`
 	Chain   chains.ChainType `json:"chain"`
 
 	TotalBuyAmount  float64 `json:"total_buy_amount"`
-	TotalBuyAvg     float64 `json:"total_buy_avg"`
+	TotalBuyAvg     float64 `json:"average_buy_price"`
 	TotalSellAmount float64 `json:"total_sell_amount"`
 	TotalBuyUsd     float64 `json:"total_buy_usd"`
-	TotalSellAvg    float64 `json:"total_sell_avg"`
+	TotalSellAvg    float64 `json:"average_sell_price"`
 	TotalSellUsd    float64 `json:"total_sell_usd"`
-	ProfitLoss      float64 `json:"profit_loss"`
+	ProfitLoss      float64 `json:"total_pnl_usd"`
 	RoiPercentage   float64 `json:"roi_percentage"`
 	NumSwaps        int     `json:"num_swaps"`
 }

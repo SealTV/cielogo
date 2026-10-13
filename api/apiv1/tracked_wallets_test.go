@@ -78,18 +78,18 @@ func TestUpdateTrackedWalletV2Request_JSON_FullFields(t *testing.T) {
 	listID := 456
 	minUSD := 100.50
 	newTrades := true
-	telegramBot := "bot123"
+	telegramBot := 123
 	discordChannel := "channel456"
 
 	req := apiv1.UpdateTrackedWalletV2Request{
-		Label:          &label,
-		ListID:         &listID,
-		MinUSD:         &minUSD,
-		TxTypes:        []string{"swap", "transfer"},
-		Chains:         []string{"ethereum", "solana"},
-		NewTrades:      &newTrades,
-		TelegramBot:    &telegramBot,
-		DiscordChannel: &discordChannel,
+		Label:            &label,
+		ListID:           &listID,
+		MinAmountUSD:     &minUSD,
+		Filters:          []int{1, 2},
+		Chains:           []int{1, 2},
+		NewTrades:        &newTrades,
+		TelegramBotID:    &telegramBot,
+		DiscordChannelID: &discordChannel,
 	}
 
 	data, err := json.Marshal(req)
@@ -103,16 +103,16 @@ func TestUpdateTrackedWalletV2Request_JSON_FullFields(t *testing.T) {
 	assert.Equal(t, *req.Label, *decoded.Label)
 	require.NotNil(t, decoded.ListID)
 	assert.Equal(t, *req.ListID, *decoded.ListID)
-	require.NotNil(t, decoded.MinUSD)
-	assert.InDelta(t, *req.MinUSD, *decoded.MinUSD, 0.01)
-	assert.Equal(t, req.TxTypes, decoded.TxTypes)
+	require.NotNil(t, decoded.MinAmountUSD)
+	assert.InDelta(t, *req.MinAmountUSD, *decoded.MinAmountUSD, 0.01)
+	assert.Equal(t, req.Filters, decoded.Filters)
 	assert.Equal(t, req.Chains, decoded.Chains)
 	require.NotNil(t, decoded.NewTrades)
 	assert.Equal(t, *req.NewTrades, *decoded.NewTrades)
-	require.NotNil(t, decoded.TelegramBot)
-	assert.Equal(t, *req.TelegramBot, *decoded.TelegramBot)
-	require.NotNil(t, decoded.DiscordChannel)
-	assert.Equal(t, *req.DiscordChannel, *decoded.DiscordChannel)
+	require.NotNil(t, decoded.TelegramBotID)
+	assert.Equal(t, *req.TelegramBotID, *decoded.TelegramBotID)
+	require.NotNil(t, decoded.DiscordChannelID)
+	assert.Equal(t, *req.DiscordChannelID, *decoded.DiscordChannelID)
 }
 
 func TestUpdateTrackedWalletV2Request_JSON_PartialFields(t *testing.T) {
@@ -138,10 +138,10 @@ func TestUpdateTrackedWalletV2Request_JSON_PartialFields(t *testing.T) {
 	require.NotNil(t, decoded.Label)
 	assert.Equal(t, *req.Label, *decoded.Label)
 	assert.Nil(t, decoded.ListID)
-	assert.Nil(t, decoded.MinUSD)
+	assert.Nil(t, decoded.MinAmountUSD)
 	assert.Nil(t, decoded.NewTrades)
-	assert.Nil(t, decoded.TelegramBot)
-	assert.Nil(t, decoded.DiscordChannel)
+	assert.Nil(t, decoded.TelegramBotID)
+	assert.Nil(t, decoded.DiscordChannelID)
 }
 
 func TestUpdateTrackedWalletV2Request_JSON_EmptyFields(t *testing.T) {
@@ -162,7 +162,7 @@ func TestUpdateTrackedWalletV2Request_JSON_EmptyFields(t *testing.T) {
 
 	assert.Nil(t, decoded.Label)
 	assert.Nil(t, decoded.ListID)
-	assert.Nil(t, decoded.MinUSD)
+	assert.Nil(t, decoded.MinAmountUSD)
 }
 
 func TestTelegramBot_JSON_IntID(t *testing.T) {

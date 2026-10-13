@@ -2,6 +2,7 @@ package cielogo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,11 +10,12 @@ import (
 
 	"github.com/sealtv/cielogo/api"
 	"github.com/sealtv/cielogo/api/apiv1"
+	"github.com/sealtv/cielogo/api/chains"
 )
 
 // GetFeedV1 retrieves the transaction feed for a wallet or list.
 //
-// Cost: 5 credits per request (3 credits when filtered by wallet).
+// Cost: 3 or 5 credits depending on the combination of wallet, chain and type filters.
 // WARNING: Setting IncludeMarketCap to true doubles the cost (10 or 6 credits).
 //
 // Example:
@@ -22,7 +24,7 @@ import (
 //	maxUSD := 100000.0
 //	includeMarketCap := true
 //	feed, err := client.GetFeedV1(ctx, &apiv1.FeedRequest{
-//		ListID:           apiv1.ToRef(int64(123)),
+//		List:             apiv1.ToRef(123),
 //		MaxUSD:           &maxUSD,
 //		IncludeMarketCap: &includeMarketCap, // WARNING: Doubles credit cost
 //	})
@@ -31,7 +33,7 @@ import (
 func (c *Client) GetFeedV1(ctx context.Context, req *apiv1.FeedRequest) (*apiv1.FeedResponse, error) {
 	resp := api.CieloResponse[apiv1.FeedResponse]{}
 
-	path := fmt.Sprintf("/v1/feed/?%s", req.GetQueryString())
+	path := fmt.Sprintf("/v1/feed?%s", req.GetQueryString())
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get feed: %w", err)
 	}
@@ -103,7 +105,7 @@ func (c *Client) GetAggregatedTokenPnLV1(ctx context.Context, req *apiv1.Aggrega
 func (c *Client) GetRelatedWalletsV1(ctx context.Context, req *apiv1.RelatedWalletsRequest) (*apiv1.RelatedWalletsResponse, error) {
 	resp := api.CieloResponse[apiv1.RelatedWalletsResponse]{}
 
-	path := fmt.Sprintf("/v1/%s/related-wallets/?%s", req.Wallet, req.GetQueryString())
+	path := fmt.Sprintf("/v1/%s/related-wallets?%s", req.Wallet, req.GetQueryString())
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get tokens pnl: %w", err)
 	}
@@ -203,7 +205,7 @@ func (c *Client) GetAllWalletsListV1(ctx context.Context, req *apiv1.GetAllWalle
 	}
 
 	if req.FollowOnly {
-		values.Add("follow_only", "true")
+		values.Add("following_only", "true")
 	}
 
 	if req.NextObject != nil && *req.NextObject != "" {
@@ -227,7 +229,7 @@ func (c *Client) GetAllWalletsListV1(ctx context.Context, req *apiv1.GetAllWalle
 func (c *Client) GetUserWalletsListsV1(ctx context.Context) ([]apiv1.WalletList, error) {
 	resp := api.CieloResponse[[]apiv1.WalletList]{}
 
-	const path = "/v1/lists"
+	const path = "/v1/lists/"
 
 	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get users lists: %w", err)
@@ -242,7 +244,7 @@ func (c *Client) GetUserWalletsListsV1(ctx context.Context) ([]apiv1.WalletList,
 //
 // https://developer.cielo.finance/reference/adduserlist
 func (c *Client) AddWalletsListV1(ctx context.Context, req *apiv1.AddWalletsListRequest) (*apiv1.WalletList, error) {
-	const path = "/v1/lists"
+	const path = "/v1/lists/"
 
 	resp := api.CieloResponse[apiv1.WalletList]{}
 
@@ -297,7 +299,7 @@ func (c *Client) DeleteWalletsListV1(ctx context.Context, listID int64, deleteWa
 //
 // https://developer.cielo.finance/reference/togglefollowlist
 func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*apiv1.ToggleFollowWalletsListResponce, error) {
-	resp := apiv1.ToggleFollowWalletsListResponce{}
+	resp := api.CieloResponse[apiv1.WalletList]{}
 
 	path := fmt.Sprintf("/v1/lists/%d/toggle-follow", listID)
 
@@ -305,7 +307,7 @@ func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*
 		return nil, fmt.Errorf("failed to toggle follow wallet list: %w", err)
 	}
 
-	return &resp, nil
+	return &apiv1.ToggleFollowWalletsListResponce{Followed: resp.Data.Followed}, nil
 }
 
 // GetTrackedWalletsV1 retrieves all wallets being tracked by the user, with optional filtering by list.
@@ -314,7 +316,7 @@ func (c *Client) ToggleFollowWalletsListV1(ctx context.Context, listID int64) (*
 //
 // https://developer.cielo.finance/reference/gettrackedwallets
 func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedWalletsRequest) (*apiv1.GetTrackedWalletsResponse, error) {
-	const path = "/v1/tracked-wallets"
+	path := "/v1/tracked-wallets/"
 
 	values := url.Values{}
 
@@ -324,6 +326,10 @@ func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedW
 
 	if req.NextObject != nil && *req.NextObject != "" {
 		values.Add("next_object", *req.NextObject)
+	}
+
+	if query := values.Encode(); query != "" {
+		path += "?" + query
 	}
 
 	resp := api.CieloResponse[apiv1.GetTrackedWalletsResponse]{}
@@ -340,7 +346,7 @@ func (c *Client) GetTrackedWalletsV1(ctx context.Context, req *apiv1.GetTrackedW
 //
 // https://developer.cielo.finance/reference/addtrackedwallet
 func (c *Client) AddTrackedWalletsV1(ctx context.Context, req *apiv1.AddTrackedWalletRequest) (*apiv1.TrackedWallet, error) {
-	const path = "/v1/tracked-wallets"
+	const path = "/v1/tracked-wallets/"
 
 	resp := api.CieloResponse[apiv1.TrackedWallet]{}
 	if err := c.makeRequest(ctx, http.MethodPost, path, req, &resp); err != nil {
@@ -356,7 +362,7 @@ func (c *Client) AddTrackedWalletsV1(ctx context.Context, req *apiv1.AddTrackedW
 //
 // https://developer.cielo.finance/reference/removetrackedwallets
 func (c *Client) RemoveTrackedWalletsV1(ctx context.Context, req *apiv1.RemoveTrackedWalletsRequest) error {
-	const path = "/v1/tracked-wallets"
+	const path = "/v1/tracked-wallets/"
 
 	if err := c.makeRequest(ctx, http.MethodDelete, path, req, nil); err != nil {
 		return fmt.Errorf("failed to delete tracked wallet: %w", err)
@@ -407,9 +413,9 @@ func (c *Client) UpdateTrackedWalletV1(ctx context.Context, walletID int64, req 
 //
 //	// Update only notification settings (partial update)
 //	updated, err := client.UpdateTrackedWalletV2(ctx, "0x1234...", &apiv1.UpdateTrackedWalletV2Request{
-//		MinUSD:         apiv1.ToRef(1000.0),
-//		TelegramBot:    apiv1.ToRef("my_bot"),
-//		DiscordChannel: apiv1.ToRef("webhook_url"),
+//		MinAmountUSD:   apiv1.ToRef(1000.0),
+//		TelegramBotID:  apiv1.ToRef(17),
+//		DiscordChannelID: apiv1.ToRef("channel_id"),
 //	})
 //
 // https://developer.cielo.finance/reference/updateTrackedWalletV2
@@ -456,9 +462,9 @@ func (c *Client) GetTelegramBotsV1(ctx context.Context) (*apiv1.GetTelegramBotsR
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	fmt.Printf("Total USD: $%.2f\n", portfolio.TotalUSD)
-//	for _, token := range portfolio.Tokens {
-//		fmt.Printf("%s: %.2f (%s)\n", token.Symbol, token.Balance, token.TotalUSDValue)
+//	fmt.Printf("Total USD: $%.2f\n", portfolio.TotalUSDValue)
+//	for _, token := range portfolio.Portfolio {
+//		fmt.Printf("%s: %.2f (%.2f)\n", token.TokenSymbol, token.Balance, token.TotalUSDValue)
 //	}
 //
 // https://developer.cielo.finance/reference/getWalletPortfolio
@@ -490,7 +496,7 @@ func (c *Client) GetWalletPortfolioV1(ctx context.Context, wallet string) (*apiv
 //   - Total USD and chain distributions are aggregated across all wallets
 //
 // Supported chains: Solana, EVM (Ethereum, Base, HyperEVM), Sui
-// Cost: 20 credits per wallet
+// Private API endpoint; configure WithPortfolioBaseURL explicitly.
 //
 // Example (aggregated multi-wallet portfolio):
 //
@@ -501,10 +507,13 @@ func (c *Client) GetWalletPortfolioV1(ctx context.Context, wallet string) (*apiv
 //
 // https://developer.cielo.finance/reference/getWalletPortfolioV2
 func (c *Client) GetWalletPortfolioV2(ctx context.Context, req *apiv1.WalletPortfolioV2Request) (*apiv1.WalletPortfolioV2Response, error) {
+	if c.portfolioBaseURL == "" {
+		return nil, errors.New("portfolio V2 requires WithPortfolioBaseURL: endpoint is private")
+	}
 	resp := api.CieloResponse[apiv1.WalletPortfolioV2Response]{}
 
 	path := fmt.Sprintf("/v2/portfolio?%s", req.GetQueryString())
-	if err := c.makeRequest(ctx, http.MethodGet, path, nil, &resp); err != nil {
+	if err := c.makeRequestAt(ctx, c.portfolioBaseURL, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, fmt.Errorf("failed to get wallet portfolio v2: %w", err)
 	}
 
@@ -517,7 +526,7 @@ func (c *Client) GetWalletPortfolioV2(ctx context.Context, req *apiv1.WalletPort
 // name, symbol, decimals, creation details, social links, and supply information.
 //
 // Supported chains: solana, ethereum, base, hyperevm
-// Cost: 1 credit per request
+// Cost: 2 credits per request
 //
 // https://developer.cielo.finance/reference/getTokenMetadata
 func (c *Client) GetTokenMetadataV1(ctx context.Context, req *apiv1.TokenMetadataRequest) (*apiv1.TokenMetadataResponse, error) {
@@ -534,7 +543,7 @@ func (c *Client) GetTokenMetadataV1(ctx context.Context, req *apiv1.TokenMetadat
 // GetTokenPriceV1 retrieves the current price in USD for a specified token.
 //
 // Supported chains: solana, ethereum, base, hyperevm
-// Cost: 1 credit per request
+// Cost: 2 credits per request
 //
 // https://developer.cielo.finance/reference/getTokenPrice
 func (c *Client) GetTokenPriceV1(ctx context.Context, req *apiv1.TokenPriceRequest) (*apiv1.TokenPriceResponse, error) {
@@ -553,7 +562,7 @@ func (c *Client) GetTokenPriceV1(ctx context.Context, req *apiv1.TokenPriceReque
 // multiple time periods (5m, 1h, 6h, 24h).
 //
 // Supported chains: solana, ethereum, base, hyperevm
-// Cost: 3 credits per request
+// Cost: 10 credits per request
 //
 // https://developer.cielo.finance/reference/getTokenStats
 func (c *Client) GetTokenStatsV1(ctx context.Context, req *apiv1.TokenStatsRequest) (*apiv1.TokenStatsResponse, error) {
@@ -599,13 +608,13 @@ func (c *Client) GetTokenBalanceV1(ctx context.Context, req *apiv1.TokenBalanceR
 //
 //	stats, err := client.GetTradingStatsV1(ctx, &apiv1.TradingStatsRequest{
 //		Wallet: "0x1234...",
-//		Chain:  apiv1.ToRef(chains.Ethereum),
+//		Days: apiv1.ToRef(apiv1.Timeframe7Days),
 //	})
 //	if err != nil {
 //		log.Fatal(err)
 //	}
 //	fmt.Printf("Total PnL: $%.2f | Win Rate: %.1f%%\n",
-//		stats.TotalPnL, stats.WinRate*100)
+//		stats.PnL, stats.WinRate*100)
 //
 // https://developer.cielo.finance/reference/getTradingStats
 func (c *Client) GetTradingStatsV1(ctx context.Context, req *apiv1.TradingStatsRequest) (*apiv1.TradingStatsResponse, error) {
@@ -622,4 +631,13 @@ func (c *Client) GetTradingStatsV1(ctx context.Context, req *apiv1.TradingStatsR
 	}
 
 	return &resp.Data, nil
+}
+
+// GetChainsV1 retrieves the currently supported chains. Cost: 0 credits.
+func (c *Client) GetChainsV1(ctx context.Context) ([]chains.ChainType, error) {
+	var resp api.CieloResponse[[]chains.ChainType]
+	if err := c.makeRequest(ctx, http.MethodGet, "/v1/chains", nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to get chains: %w", err)
+	}
+	return resp.Data, nil
 }

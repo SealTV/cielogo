@@ -12,7 +12,7 @@ Please note, CieloGo is an unofficial client library and is not endorsed or main
 ## Features
 
 - **Transaction Feed** - Get wallet or list transaction feeds with advanced filtering (chain, token, value range, market cap)
-- **Portfolio Management** - Retrieve wallet portfolios with token balances and USD values (single or multi-wallet)
+- **Portfolio Management** - Retrieve public single-wallet portfolios; multi-wallet/token-filtered portfolios require a configured private API
 - **Token Information** - Access token metadata, real-time prices, statistics, and balances
 - **PnL Analytics** - Analyze NFT and token profit/loss with aggregated statistics and performance metrics
 - **Trading Statistics** - Get detailed trading performance stats including PnL, ROI, win rates, and more
@@ -41,7 +41,7 @@ import "github.com/sealtv/cielogo"
 ### Initializing the Client
 
 ```go
-client := cielogo.NewClient()
+client := cielogo.NewClient("YOUR_API_KEY")
 ```
 
 ### Making Requests
@@ -72,71 +72,37 @@ tokensPnl, err := client.GetTokensPnlV1(ctx, &tokensPnLReq)
 
 For more details on each request and response structure, refer to the [Cielo Finance API documentation](https://developer.cielo.finance).
 
-## Breaking Changes
+## Upgrading
 
-### v0.x.x → v1.0.0
+v0.3.0 corrects the API contract and changes several public types. Read [MIGRATION.md](MIGRATION.md) before upgrading from v0.2.0. Release changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-#### 1. RelatedWallets Sorting Type Rename (Typo Fix)
+`GetWalletPortfolioV2` is a private API operation. Configure it explicitly with `WithPortfolioBaseURL`; token-filtered results are available as `SingleToken`. The default public host does not expose this route in the current API router.
 
-**Breaking Change:** Type and constant names corrected from `RelatedWalletsSoring` to `RelatedWalletsSorting`.
-
-**Migration:**
 ```go
-// Before:
-sortCriteria := apiv1.RelatedWalletsSoringInflowDesc
-
-// After:
-sortCriteria := apiv1.RelatedWalletsSortingInflowDesc
+client := cielogo.NewClient("YOUR_API_KEY",
+    cielogo.WithPortfolioBaseURL("https://your-private-api.example/api"),
+)
 ```
 
-**All Constants Renamed:**
-- `RelatedWalletsSoringInflowAsc` → `RelatedWalletsSortingInflowAsc`
-- `RelatedWalletsSoringInflowDesc` → `RelatedWalletsSortingInflowDesc`
-- `RelatedWalletsSoringOutflowAsc` → `RelatedWalletsSortingOutflowAsc`
-- `RelatedWalletsSoringOutflowDesc` → `RelatedWalletsSortingOutflowDesc`
-- `RelatedWalletsSoringTransactionsAsc` → `RelatedWalletsSortingTransactionsAsc`
-- `RelatedWalletsSoringTransactionsDesc` → `RelatedWalletsSortingTransactionsDesc`
-
-**Automated Fix:**
-```bash
-find . -type f -name "*.go" -exec sed -i 's/RelatedWalletsSoring/RelatedWalletsSorting/g' {} +
-```
-
-#### 2. DeleteWalletsListV1 Signature Change
-
-**Breaking Change:** New required `deleteWallets` parameter controls cascade deletion.
-
-**Migration:**
-```go
-// Before:
-err := client.DeleteWalletsListV1(ctx, listID)
-
-// After (preserve wallets):
-err := client.DeleteWalletsListV1(ctx, listID, false)
-
-// Or (delete wallets too):
-err := client.DeleteWalletsListV1(ctx, listID, true)
-```
-
-**Default Behavior:** Pass `false` to maintain backward compatibility (delete list only, keep wallets).
+HTTP 202 pending responses return `*api.Error` with `StatusCode`, `Status`, `RetryAfter` and `RetryAfterDuration`. Callers control retries and credit spending.
 
 ## API Credits
 
-All API endpoints consume credits from your Cielo Finance account. Below is a comprehensive cost table:
+Public API operations consume credits according to the server router. GetChainsV1 is free. Below are the public-router costs for supported operations:
 
 | Endpoint | Cost (Credits) | Notes |
 |----------|----------------|-------|
 | **Feed & PnL** |
-| GetFeedV1 | 5 (3 with wallet filter) | **10/6 with IncludeMarketCap=true** ⚠️ |
+| GetFeedV1 | 3 or 5 depending on filter combination | **10/6 with IncludeMarketCap=true** ⚠️ |
 | GetNftsPnlV1 | 5 | |
 | GetTokensPnlV1 | 5 | |
 | GetAggregatedTokenPnLV1 | **20** | Expensive operation |
 | **Portfolio & Token Info** |
 | GetWalletPortfolioV1 | **20** | |
-| GetWalletPortfolioV2 | **20 per wallet** | |
-| GetTokenMetadataV1 | 1 | |
-| GetTokenPriceV1 | 1 | |
-| GetTokenStatsV1 | 3 | |
+| GetWalletPortfolioV2 | Private endpoint | Deployment-specific |
+| GetTokenMetadataV1 | 2 | |
+| GetTokenPriceV1 | 2 | |
+| GetTokenStatsV1 | 10 | |
 | GetTokenBalanceV1 | 3 | |
 | **Trading Stats** |
 | GetTradingStatsV1 | **30** | Most expensive, may return 202 Accepted |
@@ -147,7 +113,7 @@ All API endpoints consume credits from your Cielo Finance account. Below is a co
 | GetWalletsTagsV1 | 5 | Batch operation (up to 50 wallets) |
 | GetWalletsByTagV1 | 10 | |
 | **Lists** |
-| GetAllWalletsListsV1 | 5 | |
+| GetAllWalletsListV1 | 5 | |
 | GetUserWalletsListsV1 | 5 | |
 | AddWalletsListV1 | 5 | |
 | UpdateWalletsListV1 | 5 | |
@@ -165,7 +131,7 @@ All API endpoints consume credits from your Cielo Finance account. Below is a co
 ### Cost Optimization Tips
 
 1. **Use batch operations** - `GetWalletsTagsV1` supports up to 50 wallets for 5 credits (vs 5 credits per wallet)
-2. **Filter feeds by wallet** - Reduces cost from 5 to 3 credits
+2. **Use selective feed filters** - Chain/type filters can reduce cost to 3 credits; a wallet alone does not always reduce the price
 3. **Avoid IncludeMarketCap** unless necessary - Doubles feed costs (5→10 or 3→6)
 4. **Cache expensive results** - Portfolio (20 credits) and Trading Stats (30 credits) change infrequently
 5. **Use V2 partial updates** - `UpdateTrackedWalletV2` allows updating specific fields without full replacement
