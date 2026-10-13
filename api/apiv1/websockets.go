@@ -2,6 +2,7 @@ package apiv1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -125,53 +126,57 @@ func (e *WSEvent) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("cannot unmarshal event: %w", err)
 	}
 
-	e.Type = tmp.Type
+	if tmp.Type == "" {
+		return errors.New("websocket event requires type")
+	}
+	decoded := WSEvent{Type: tmp.Type}
 
 	var err error
 	switch tmp.Type {
 	case ErrEventType:
 		var data WSEventError
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
-			e.Data = data
+			decoded.Data = data
 		}
 	case TxEventType:
 		var data TxEvent
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
-			e.Data = data
+			decoded.Data = data
 		}
 	case WalletSubscribedEventType:
 		var data WalletSubscriptionAck
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
-			e.Data = data
+			decoded.Data = data
 		}
 	case WalletUnsubscribedEventType:
 		var data WalletUnsubscribeCmd
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
-			e.Data = data
+			decoded.Data = data
 		}
 	case FeedSubscribedEventType:
 		var data FeedSubscriptionAck
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
-			e.Data = data
+			decoded.Data = data
 		}
 	case FeedUnsubscribedEventType:
 		var data string
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
-			e.Data = data
+			decoded.Data = data
 		}
 	case PongEventType:
 		var data string
 		if err = json.Unmarshal(tmp.Data, &data); err == nil {
-			e.Data = data
+			decoded.Data = data
 		}
 	default:
-		e.Data = append(json.RawMessage(nil), tmp.Data...)
+		decoded.Data = append(json.RawMessage(nil), tmp.Data...)
 	}
 
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal event data: %w", err)
 	}
 
+	*e = decoded
 	return nil
 }
 

@@ -74,6 +74,9 @@ For more details on each request and response structure, refer to the [Cielo Fin
 
 ## Upgrading
 
+The 1.0 release candidate adds failure-handling and lifecycle guarantees documented in [API_STABILITY.md](API_STABILITY.md). It remains a prerelease until the bounded production smoke and consumer checks pass.
+
+
 v0.3.0 corrects the API contract and changes several public types. Read [MIGRATION.md](MIGRATION.md) before upgrading from v0.2.0. Release changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 `GetWalletPortfolioV2` is a private API operation. Configure it explicitly with `WithPortfolioBaseURL`; token-filtered results are available as `SingleToken`. The default public host does not expose this route in the current API router.
@@ -110,7 +113,7 @@ Public API operations consume credits according to the server router. GetChainsV
 | GetRelatedWalletsV1 | 10 | |
 | **Tags** |
 | GetWalletTagsV1 | 5 | Deprecated, use GetWalletsTagsV1 |
-| GetWalletsTagsV1 | 5 | Batch operation (up to 50 wallets) |
+| GetWalletsTagsV1 | 5 | Batch operation; current server boundary is 49 wallets |
 | GetWalletsByTagV1 | 10 | |
 | **Lists** |
 | GetAllWalletsListV1 | 5 | |
@@ -130,7 +133,7 @@ Public API operations consume credits according to the server router. GetChainsV
 
 ### Cost Optimization Tips
 
-1. **Use batch operations** - `GetWalletsTagsV1` supports up to 50 wallets for 5 credits (vs 5 credits per wallet)
+1. **Use batch operations** - `GetWalletsTagsV1` supports batch requests for 5 credits (use at most 49 wallets until the server boundary bug is fixed) (vs 5 credits per wallet)
 2. **Use selective feed filters** - Chain/type filters can reduce cost to 3 credits; a wallet alone does not always reduce the price
 3. **Avoid IncludeMarketCap** unless necessary - Doubles feed costs (5→10 or 3→6)
 4. **Cache expensive results** - Portfolio (20 credits) and Trading Stats (30 credits) change infrequently

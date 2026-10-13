@@ -14,6 +14,7 @@ import (
 
 func TestGetWalletPortfolioV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.WalletPortfolioResponse]{
+		Status: "ok",
 		Data: apiv1.WalletPortfolioResponse{
 			LastUpdated:   1699564800,
 			TotalUSDValue: 1234.56,
@@ -48,6 +49,7 @@ func TestGetWalletPortfolioV1(t *testing.T) {
 
 func TestGetWalletPortfolioV2(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.WalletPortfolioV2Response]{
+		Status: "ok",
 		Data: apiv1.WalletPortfolioV2Response{
 			LastUpdated:   1699564800,
 			TotalUSDValue: 10000.0,
@@ -86,6 +88,7 @@ func TestGetWalletPortfolioV2(t *testing.T) {
 
 func TestGetTokenMetadataV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.TokenMetadataResponse]{
+		Status: "ok",
 		Data: apiv1.TokenMetadataResponse{
 			Chain:   "solana",
 			Address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -117,6 +120,7 @@ func TestGetTokenMetadataV1(t *testing.T) {
 
 func TestGetTokenPriceV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.TokenPriceResponse]{
+		Status: "ok",
 		Data: apiv1.TokenPriceResponse{
 			Chain:       "solana",
 			Address:     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -146,6 +150,7 @@ func TestGetTokenPriceV1(t *testing.T) {
 
 func TestGetTokenStatsV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.TokenStatsResponse]{
+		Status: "ok",
 		Data: apiv1.TokenStatsResponse{
 			TokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 			PriceUSD:     1.0,
@@ -180,6 +185,7 @@ func TestGetTokenStatsV1(t *testing.T) {
 
 func TestGetTokenBalanceV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.TokenBalanceResponse]{
+		Status: "ok",
 		Data: apiv1.TokenBalanceResponse{
 			Chain:         "solana",
 			TokenAddress:  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -213,6 +219,7 @@ func TestGetTokenBalanceV1(t *testing.T) {
 
 func TestGetTradingStatsV1(t *testing.T) {
 	mockResp := api.CieloResponse[apiv1.TradingStatsResponse]{
+		Status: "ok",
 		Data: apiv1.TradingStatsResponse{
 			SwapsCount:          150,
 			BuyCount:            120,
@@ -268,7 +275,8 @@ func TestMakeRequest_WithAPIError(t *testing.T) {
 func TestClient_ContextCancellation(t *testing.T) {
 	server := testutil.NewMockServer(t)
 	mockResp := api.CieloResponse[apiv1.WalletPortfolioResponse]{
-		Data: apiv1.WalletPortfolioResponse{},
+		Status: "ok",
+		Data:   apiv1.WalletPortfolioResponse{},
 	}
 	server.SetResponse("/v1/wallet123/portfolio", mockResp)
 

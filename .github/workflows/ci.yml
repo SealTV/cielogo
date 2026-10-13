@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.22', '1.23']
+        go-version: ['1.22', '1.23', '1.26.9', '1.27.2']
 
     steps:
       - name: Checkout code
@@ -33,6 +33,9 @@ jobs:
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
 
+      - name: Compile integration tests without API calls
+        run: go test -tags=integration -run '^$' ./...
+
       - name: Upload coverage to Codecov
         if: matrix.go-version == '1.22'
         uses: codecov/codecov-action@v4
@@ -45,15 +48,15 @@ jobs:
       - name: Check coverage threshold
         if: matrix.go-version == '1.22'
         run: |
-          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          threshold=20
-          echo "Current coverage: ${coverage}%"
-          echo "Threshold: ${threshold}% (will increase as more endpoints get tests)"
-          if (( $(echo "$coverage < $threshold" | bc -l) )); then
-            echo "❌ Coverage ${coverage}% is below threshold ${threshold}%"
-            exit 1
-          fi
-          echo "✅ Coverage ${coverage}% meets threshold ${threshold}%"
+          # Example programs and test helpers are outside the SDK coverage budget.
+          awk 'NR > 1 && $1 !~ /\/(examples|testutil)\// {
+            total += $2
+            if ($3 > 0) covered += $2
+          } END {
+            coverage = total ? 100 * covered / total : 0
+            printf "SDK coverage: %.1f%%; required: 70%%\n", coverage
+            if (total == 0 || coverage < 70) exit 1
+          }' coverage.out
 
   lint:
     name: Lint
@@ -89,3 +92,27 @@ jobs:
 
       - name: Build
         run: go build -v ./...
+
+  security:
+    name: Vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.2'
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
+  fuzz:
+    name: Decoder fuzz smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.2'
+      - run: go test ./api/apiv1 -run '^$' -fuzz '^FuzzTxEvent$' -fuzztime=10s -parallel=2
+      - run: go test ./api/apiv1 -run '^$' -fuzz '^FuzzWSEvent$' -fuzztime=10s -parallel=2
+      - run: go test ./api/apiv1 -run '^$' -fuzz '^FuzzPortfolioResponse$' -fuzztime=10s -parallel=2
+      - run: go test ./api -run '^$' -fuzz '^FuzzResponseEnvelope$' -fuzztime=10s -parallel=2
+      - run: go test . -run '^$' -fuzz '^FuzzRetryAfter$' -fuzztime=10s -parallel=2

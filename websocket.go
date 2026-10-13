@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -18,22 +19,49 @@ const (
 	maxMessageSize = 512 * 1024
 )
 
+// WithWebSocketDialer configures TLS, proxy and handshake settings for WebSocket
+// connections. A copy is retained; referenced TLS configurations must be immutable.
+func WithWebSocketDialer(dialer *websocket.Dialer) ClientOption {
+	return func(c *Client) {
+		if dialer != nil {
+			copied := *dialer
+			c.websocketDialer = &copied
+		}
+	}
+}
+
 type WebsocketClient struct {
-	conn    *websocket.Conn
-	writeMu sync.Mutex
+	conn       *websocket.Conn
+	writeMu    sync.Mutex
+	listenerMu sync.Mutex
 }
 
 func (c *Client) NewWebsocketConnection(ctx context.Context, opts ...WebsocketOption) (*WebsocketClient, error) {
+	if c == nil || c.cli == nil {
+		return nil, ErrInvalidClient
+	}
+	if ctx == nil {
+		return nil, ErrNilContext
+	}
 	wsURL := strings.TrimRight(c.baseURL, "/") + "/v1/ws"
 	wsURL = strings.Replace(wsURL, "https://", "wss://", 1)
 	wsURL = strings.Replace(wsURL, "http://", "ws://", 1)
-	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, http.Header{
-		"X-API-KEY": []string{c.apiKey},
+	dialer := c.websocketDialer
+	if dialer == nil {
+		dialer = websocket.DefaultDialer
+	}
+	conn, resp, err := dialer.DialContext(ctx, wsURL, http.Header{
+		"X-Api-Key": []string{c.apiKey},
 	})
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			if apiErr := c.decodeResponse(resp, nil); apiErr != nil {
+				return nil, fmt.Errorf("failed to open websocket connection: %w", apiErr)
+			}
+		}
 		return nil, fmt.Errorf("failed to open websocket connection: %w", err)
 	}
 
@@ -44,17 +72,27 @@ func (c *Client) NewWebsocketConnection(ctx context.Context, opts ...WebsocketOp
 	}
 
 	for _, opt := range opts {
-		opt(ws)
+		if opt != nil {
+			opt(ws)
+		}
 	}
 
 	return ws, nil
 }
 
 func (ws *WebsocketClient) Close() {
-	ws.conn.Close()
+	if ws != nil && ws.conn != nil {
+		_ = ws.conn.Close()
+	}
 }
 
 func (ws *WebsocketClient) SendCommand(cmd apiv1.WebSocketsCommand) error {
+	if ws == nil || ws.conn == nil {
+		return ErrInvalidClient
+	}
+	if cmd == nil || (reflect.ValueOf(cmd).Kind() == reflect.Pointer && reflect.ValueOf(cmd).IsNil()) {
+		return ErrNilRequest
+	}
 	ws.writeMu.Lock()
 	defer ws.writeMu.Unlock()
 	if err := ws.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
@@ -72,6 +110,16 @@ func (ws *WebsocketClient) SendCommand(cmd apiv1.WebSocketsCommand) error {
 // Cancellation closes the connection to unblock a pending read. Only one listener
 // may run per connection; SendCommand is safe for concurrent callers.
 func (ws *WebsocketClient) RunListener(ctx context.Context, out chan<- apiv1.WSEvent) error {
+	if ws == nil || ws.conn == nil {
+		return ErrInvalidClient
+	}
+	if ctx == nil {
+		return ErrNilContext
+	}
+	if !ws.listenerMu.TryLock() {
+		return ErrListenerRunning
+	}
+	defer ws.listenerMu.Unlock()
 	if err := ctx.Err(); err != nil {
 		ws.Close()
 		return err
@@ -108,25 +156,19 @@ type WebsocketOption func(*WebsocketClient)
 
 func WithCloseHandler(h func(code int, text string) error) WebsocketOption {
 	return func(ws *WebsocketClient) {
-		ws.conn.SetCloseHandler(func(code int, text string) error {
-			return h(code, text)
-		})
+		ws.conn.SetCloseHandler(h)
 	}
 }
 
 func WithPingHandler(h func(appData string) error) WebsocketOption {
 	return func(ws *WebsocketClient) {
-		ws.conn.SetPingHandler(func(appData string) error {
-			return h(appData)
-		})
+		ws.conn.SetPingHandler(h)
 	}
 }
 
 func WithPongHandler(h func(appData string) error) WebsocketOption {
 	return func(ws *WebsocketClient) {
-		ws.conn.SetPongHandler(func(appData string) error {
-			return h(appData)
-		})
+		ws.conn.SetPongHandler(h)
 	}
 }
 

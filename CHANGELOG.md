@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.0-rc.1
+
+Stabilize the existing SDK surface before the first stable release. See [API_STABILITY.md](API_STABILITY.md) and [MIGRATION.md](MIGRATION.md).
+
+- Strict, bounded HTTP decoding, default timeout, recognizable nil/configuration errors and cross-origin redirect protection.
+- Complete HTTP method matrix, malformed-response and serialization regression tests.
+- Preserve flattened transaction payloads on marshal; atomic WebSocket decode; concurrent-listener guard and configurable TLS dialer.
+- Correct remaining Bridge field spellings and expose canonical aliases.
+- Fix integration-tag compilation and unexpected-error masking; add a manual production smoke with an explicit 72-100 credit ceiling.
+- Add actual-server-handler checks, five fuzz targets, multi-Go CI and a vulnerability gate.
+- Candidate only: production smoke and consumer validation are required before the final stable tag.
+
 ## v0.3.0
 
 Correct existing API requests and response decoding against the server contract. This release has breaking Go type changes; see [MIGRATION.md](MIGRATION.md).
