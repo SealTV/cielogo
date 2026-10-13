@@ -76,7 +76,7 @@ func WithMaxResponseBytes(limit int64) ClientOption {
 }
 
 func NewClient(apiKey string, opts ...ClientOption) *Client {
-	var transport http.RoundTripper = http.DefaultTransport
+	transport := http.DefaultTransport
 	if original, ok := transport.(*http.Transport); ok {
 		cloned := original.Clone()
 		cloned.MaxIdleConnsPerHost = 100
