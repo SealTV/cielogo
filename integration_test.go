@@ -277,10 +277,16 @@ func TestIntegrationReleaseSmoke(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	reserved := 0
+	t.Cleanup(func() {
+		t.Logf("Reserved credit upper bound: %d; limit: %d", reserved, budget)
+	})
 	call := func(name string, cost int, fn func(*testing.T)) {
 		require.LessOrEqual(t, reserved+cost, budget, "credit budget exhausted before %s", name)
 		reserved += cost
-		if !t.Run(name, fn) {
+		if !t.Run(name, func(t *testing.T) {
+			t.Logf("Reserved credit upper bound for this request: %d; cumulative: %d", cost, reserved)
+			fn(t)
+		}) {
 			t.FailNow()
 		}
 	}
@@ -341,6 +347,7 @@ func TestIntegrationReleaseSmoke(t *testing.T) {
 			var apiErr *api.Error
 			require.ErrorAs(t, err, &apiErr)
 			require.Equal(t, http.StatusNotFound, apiErr.StatusCode)
+			t.Log("API returned balance not found; successful balance data was not validated")
 			return
 		}
 		require.Equal(t, testSolanaToken, result.TokenAddress)
@@ -354,5 +361,4 @@ func TestIntegrationReleaseSmoke(t *testing.T) {
 		require.GreaterOrEqual(t, result.WinRate, 0.0)
 		require.LessOrEqual(t, result.WinRate, 1.0)
 	})
-	t.Logf("Reserved credit upper bound: %d; limit: %d", reserved, budget)
 }
