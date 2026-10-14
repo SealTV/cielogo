@@ -1,6 +1,6 @@
 # 1.0 release audit
 
-Date: 2026-10-13. Baseline: v0.3.0 (dc4781b). Supplied server source: 1b99824e. Scope: existing SDK operations, transport/error behavior, serialization, WebSocket lifecycle and release gates. No production API calls were made.
+Dates: 2026-10-13 through 2026-10-14. Baseline: v0.3.0 (dc4781b). Candidate: v1.0.0-rc.1 (dd52688). Supplied server source: 1b99824e. Scope: existing SDK operations, transport/error behavior, serialization, WebSocket lifecycle and release gates.
 
 ## Findings fixed in the candidate
 
@@ -31,8 +31,10 @@ Date: 2026-10-13. Baseline: v0.3.0 (dc4781b). Supplied server source: 1b99824e. 
 | Vet/build/lint | Pass for published packages |
 | Vulnerability scan | No called vulnerabilities reported on Go 1.27.2; local Go 1.27.1 requires standard-library security fixes |
 | Integration tag | Compiles without API calls |
-| Production smoke | Not run; needs an explicit budget and configured key |
-| Consumer runtime trial | Not performed |
+| Production smoke | Attempted with a 72-credit ceiling; stopped at the free chains request because the configured key was rejected. No paid requests ran. [Workflow log](https://github.com/SealTV/cielogo/actions/runs/38540602118) |
+| Consumer runtime trial | In an isolated trading-bot copy, ordinary/race tests, vet and latest lint pass after removing its obsolete v0.2.0 URL shim. See [CONSUMER_VALIDATION.md](CONSUMER_VALIDATION.md) |
+
+The final smoke configuration uses fresh HTTP/1 connections: standard `net/http` can retry failed GETs on reused connections, so disabling API-level retries alone is not enough to bound request attempts. This affects the integration-test transport only; the SDK retains connection pooling and documents transport retry policy separately.
 
 The fuzz count describes a bounded campaign, not proof of absence of defects. Security results depend on the database and compiler. Local handlers do not exercise databases/business logic, authentication middleware or production ingress. Live mutations/private production endpoints were not tested.
 
@@ -49,5 +51,7 @@ The server's total_supply_string is display-formatted, not an exact integer. The
 1. Merge only after every candidate CI job passes.
 2. Publish v1.0.0-rc.1 with stability and migration documentation.
 3. Explicitly run TestIntegrationReleaseSmoke with a 72-100 credit ceiling. At most 72 credits are reserved; no retries. Review pending/not-found outcomes before claiming live data paths are validated.
-4. Try the candidate in a real consumer, including pagination, events and error branches.
+4. Try the candidate in a real consumer, including pagination and error branches. Completed using mocked HTTP transport in trading-bot; its feed uses a separate client, so SDK event coverage remains fixture/WebSocket tests.
 5. If no required contract changes remain, tag the validated commit as v1.0.0. Retain the production/private/mutation limitations in release notes.
+
+The remaining stable gate is a successful production smoke with a valid `CIELO_API_KEY`. Update the repository's Actions secret before rerunning; do not publish v1.0.0 while this gate is open. The failed authentication attempt reserved zero paid credits, so the original 72-credit paid ceiling remains available.
