@@ -58,7 +58,7 @@ Keep `/api` in the configured URL. Do not use the public host unless your deploy
 
 ## HTTP pending and retries
 
-Use `errors.As(err, &apiErr)` with `var apiErr *api.Error`. Errors now expose `StatusCode`, the raw `RetryAfter` header and parsed `RetryAfterDuration`. A 202 response retains `Status == "pending"`. No automatic retry occurs: repeated calls can consume credits. Context cancellation and transport errors remain wrapped for `errors.Is`.
+Use `errors.As(err, &apiErr)` with `var apiErr *api.Error`. Errors now expose `StatusCode`, the raw `RetryAfter` header and parsed `RetryAfterDuration`. A 202 response retains `Status == "pending"`. The SDK does not retry these responses; repeated calls can consume credits. Transport-level connection retries depend on the supplied HTTP client; see [API_STABILITY.md](API_STABILITY.md). Context cancellation and transport errors remain wrapped for `errors.Is`.
 
 ## WebSocket
 

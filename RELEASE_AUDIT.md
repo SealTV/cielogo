@@ -34,6 +34,8 @@ Dates: 2026-10-13 through 2026-10-14. Baseline: v0.3.0 (dc4781b). Candidate: v1.
 | Production smoke | Attempted with a 72-credit ceiling; stopped at the free chains request because the configured key was rejected. No paid requests ran. [Workflow log](https://github.com/SealTV/cielogo/actions/runs/38540602118) |
 | Consumer runtime trial | In an isolated trading-bot copy, ordinary/race tests, vet and latest lint pass after removing its obsolete v0.2.0 URL shim. See [CONSUMER_VALIDATION.md](CONSUMER_VALIDATION.md) |
 
+The final smoke configuration uses fresh HTTP/1 connections: standard `net/http` can retry failed GETs on reused connections, so disabling API-level retries alone is not enough to bound request attempts. This affects the integration-test transport only; the SDK retains connection pooling and documents transport retry policy separately.
+
 The fuzz count describes a bounded campaign, not proof of absence of defects. Security results depend on the database and compiler. Local handlers do not exercise databases/business logic, authentication middleware or production ingress. Live mutations/private production endpoints were not tested.
 
 Public CI must pass on the actual candidate commit before tagging. It checks Go 1.22/1.23 compatibility and patched 1.26.9/1.27.2, and enforces 70% SDK aggregate coverage.
