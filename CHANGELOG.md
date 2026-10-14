@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.0 — 2026-10-14
+
+Promote the audited SDK surface to the first stable 1.x contract. The SDK implementation is unchanged from v1.0.0-rc.1; this release finalizes the stability, migration and validation documentation.
+
+- Automated checks pass on four Go versions, including race, build, lint, vulnerability and fuzz gates.
+- An isolated trading-bot trial passes tests, race checks, vet and lint after removing its obsolete tracked-wallet URL shim; document that migration.
+- Bound paid integration request attempts with fresh HTTP/1 connections and report pending/not-found outcomes and reserved credits explicitly.
+- Production smoke stopped at invalid-key authentication before any paid request. Successful live data paths, production writes and private endpoints remain unverified; see [RELEASE_AUDIT.md](RELEASE_AUDIT.md).
+
 ## v1.0.0-rc.1
 
 Stabilize the existing SDK surface before the first stable release. See [API_STABILITY.md](API_STABILITY.md) and [MIGRATION.md](MIGRATION.md).
