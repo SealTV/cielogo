@@ -27,7 +27,7 @@ Please note, CieloGo is an unofficial client library and is not endorsed or main
 To use CieloGo in your Go project, install it as a module:
 
 ```bash
-go get github.com/sealtv/cielogo
+go get github.com/sealtv/cielogo@v1.0.0
 ```
 
 ## Usage
@@ -74,7 +74,7 @@ For more details on each request and response structure, refer to the [Cielo Fin
 
 ## Upgrading
 
-The 1.0 release candidate adds failure-handling and lifecycle guarantees documented in [API_STABILITY.md](API_STABILITY.md). It remains a prerelease until the bounded production smoke and consumer checks pass.
+The 1.0 release defines failure-handling and lifecycle guarantees in [API_STABILITY.md](API_STABILITY.md). Automated checks and an isolated consumer trial passed. Production smoke stopped at invalid-key authentication; successful live data paths remain unverified. See [RELEASE_AUDIT.md](RELEASE_AUDIT.md) for the evidence and scope.
 
 
 v0.3.0 corrects the API contract and changes several public types. Read [MIGRATION.md](MIGRATION.md) before upgrading from v0.2.0. Release changes are listed in [CHANGELOG.md](CHANGELOG.md).

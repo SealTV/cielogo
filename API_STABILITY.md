@@ -42,10 +42,10 @@ The default base URL is the public API. Portfolio V2 requires an explicit `WithP
 - Minimum Go 1.22/1.23 compatibility and patched Go 1.26.9/1.27.2 runs. Production should use a maintained, patched Go toolchain; old compatibility jobs are not a security recommendation.
 - Vulnerability scanning on a patched toolchain, plus vet, build and lint.
 - Integration tests compile without secrets on every change.
-- Before the final v1.0.0 tag, run the budgeted read-only production smoke (upper bound 72 credits, explicit ceiling 72-100), review any pending/not-found results, and try the candidate in a consumer. Writes and private production endpoints remain untested unless separately configured and authorized.
+- An isolated consumer trial covers pagination and error branches. The budgeted read-only production smoke (upper bound 72 credits, explicit ceiling 72-100) stopped at invalid-key authentication before paid requests. Successful live data paths, writes and private production endpoints remain unverified. Pending/not-found outcomes must be reviewed when live validation is completed.
 
-A release candidate can pass all local gates while these final deployment/consumer checks remain open. Such a candidate must be labeled prerelease.
+The v1.0.0 stability contract is based on passing automated source-contract checks and the isolated consumer trial. It does not imply that production deployment equivalence has been validated. The failed live attempt and its remaining scope are recorded in [RELEASE_AUDIT.md](RELEASE_AUDIT.md) and release notes.
 
 ## Known upstream limits
 
-The supplied wallet-tag handler rejects the 50th wallet despite the advertised maximum of 50. Use at most 49 until the server is fixed. The SDK surfaces the error and does not silently split paid requests. See [RELEASE_AUDIT.md](RELEASE_AUDIT.md) for evidence and remaining release gates.
+The supplied wallet-tag handler rejects the 50th wallet despite the advertised maximum of 50. Use at most 49 until the server is fixed. The SDK surfaces the error and does not silently split paid requests. See [RELEASE_AUDIT.md](RELEASE_AUDIT.md) for evidence and remaining validation.

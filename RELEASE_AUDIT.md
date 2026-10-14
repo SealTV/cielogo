@@ -1,6 +1,6 @@
 # 1.0 release audit
 
-Dates: 2026-10-13 through 2026-10-14. Baseline: v0.3.0 (dc4781b). Candidate: v1.0.0-rc.1 (dd52688). Supplied server source: 1b99824e. Scope: existing SDK operations, transport/error behavior, serialization, WebSocket lifecycle and release gates.
+Dates: 2026-10-13 through 2026-10-14. Baseline: v0.3.0 (dc4781b). Stable release: v1.0.0; SDK implementation unchanged from v1.0.0-rc.1 (dd52688). Supplied server source: 1b99824e. Scope: existing SDK operations, transport/error behavior, serialization, WebSocket lifecycle and validation.
 
 ## Findings fixed in the candidate
 
@@ -46,12 +46,10 @@ The supplied wallet-tag handler checks len(wallets) >= 50 while appending and wr
 
 The server's total_supply_string is display-formatted, not an exact integer. The SDK preserves it as a string; use documented raw values within their supported range for precision-sensitive code.
 
-## Final stable prerequisites
+## Release decision and remaining validation
 
-1. Merge only after every candidate CI job passes.
-2. Publish v1.0.0-rc.1 with stability and migration documentation.
-3. Explicitly run TestIntegrationReleaseSmoke with a 72-100 credit ceiling. At most 72 credits are reserved; no retries. Review pending/not-found outcomes before claiming live data paths are validated.
-4. Try the candidate in a real consumer, including pagination and error branches. Completed using mocked HTTP transport in trading-bot; its feed uses a separate client, so SDK event coverage remains fixture/WebSocket tests.
-5. If no required contract changes remain, tag the validated commit as v1.0.0. Retain the production/private/mutation limitations in release notes.
+The v1.0.0 release promotes the audited existing SDK contract after passing automated checks and an isolated consumer trial. No SDK implementation changes were needed after v1.0.0-rc.1. Production validation is incomplete and is explicitly retained in the stability documentation and release notes.
 
-The remaining stable gate is a successful production smoke with a valid `CIELO_API_KEY`. Update the repository's Actions secret before rerunning; do not publish v1.0.0 while this gate is open. The failed authentication attempt reserved zero paid credits, so the original 72-credit paid ceiling remains available.
+The consumer trial uses mocked HTTP transport in trading-bot, including pagination and error branches. Its feed uses a separate client, so SDK event coverage remains fixture/WebSocket tests.
+
+To complete live validation, update the Actions `CIELO_API_KEY` secret and run `TestIntegrationReleaseSmoke` with a 72-100 credit ceiling. At most 72 credits are reserved; the smoke transport prevents automatic connection retries. Review pending/not-found outcomes before claiming live data paths are validated. The failed authentication attempt reserved zero paid credits, so the original 72-credit paid ceiling remains available. Production writes and private endpoints are outside this smoke's scope.

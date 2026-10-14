@@ -1,6 +1,6 @@
-# Migrating to the 1.0 release candidate
+# Migrating to 1.0
 
-The candidate retains the corrected v0.3.0 request/response shapes and adds stricter failure handling. Read [API_STABILITY.md](API_STABILITY.md) for the planned 1.x compatibility contract.
+The release retains the corrected v0.3.0 request/response shapes and adds stricter failure handling. Read [API_STABILITY.md](API_STABILITY.md) for the 1.x compatibility contract.
 
 Changes from v0.3.0:
 
